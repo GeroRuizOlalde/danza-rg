@@ -86,19 +86,34 @@ export default function HomePage() {
 
   // PROCESAMIENTO DINÁMICO DE LA GRILLA DE HORARIOS
   const grillaHoraria = useMemo(() => {
-    const horas = [17, 18, 19, 20, 21];
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-    
-    return horas.map(h => {
-      const fila: any = { hs: h };
-      dias.forEach(d => {
-        const coincidencia = horariosDB.find(item => item.hora === h && item.dia === d && item.sala === sala);
-        const claveDia = d.toLowerCase().slice(0, 3).replace('mié', 'mie');
-        fila[claveDia] = coincidencia ? { clase: coincidencia.clases.nombre, nivel: coincidencia.nivel } : null;
+  const horas = [17, 18, 19, 20, 21];
+  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  
+  // Normalización para evitar problemas de unicode con acentos
+  const normalizar = (s: string) => s.normalize('NFC').toLowerCase().trim();
+  
+  const clavesDia: Record<string, string> = {
+    'lunes': 'lun', 'martes': 'mar', 'miércoles': 'mie',
+    'jueves': 'jue', 'viernes': 'vie'
+  };
+
+  return horas.map(h => {
+    const fila: any = { hs: h };
+    dias.forEach(d => {
+      const coincidencia = horariosDB.find(item => {
+        const diaDB = normalizar(item.dia ?? '');
+        const diaFiltro = normalizar(d);
+        return item.hora === h && diaDB === diaFiltro && item.sala === sala;
       });
-      return fila;
+      const clave = clavesDia[normalizar(d)] ?? normalizar(d).slice(0, 3);
+      fila[clave] = coincidencia ? { 
+        clase: coincidencia.clases?.nombre ?? 'Clase', 
+        nivel: coincidencia.nivel 
+      } : null;
     });
-  }, [horariosDB, sala]);
+    return fila;
+  });
+}, [horariosDB, sala]);
 
   return (
     <>

@@ -1,124 +1,123 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Navbar from "@/components/Navbar";
 
-export default function StudentLoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isRegister, setIsRegister] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/admin/dashboard';
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
-    if (isRegister) {
-      // REGISTRO (Para alumnas nuevas que se registran solas)
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/perfil/completar`,
-        }
       });
-      if (error) alert(error.message);
-      else {
-        alert("¡Cuenta creada! Revisá tu mail para confirmar e ingresar.");
-        // No redirigimos todavía porque debe confirmar el email
-      }
-    } else {
-      // LOGIN
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert("Credenciales inválidas o cuenta no confirmada.");
-      else router.push("/turnero");
-    }
-    setLoading(false);
-  };
 
-  const handleResetPassword = async () => {
-    if (!email) return alert("Por favor, ingresá tu email primero en el campo de arriba.");
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/perfil/completar`,
-    });
-    
-    if (error) alert(error.message);
-    else alert("Te enviamos un mail para restablecer tu contraseña. Revisá tu bandeja de entrada.");
+      if (error) {
+        setError(
+          error.message === "Invalid login credentials"
+            ? "Email o contraseña incorrectos."
+            : error.message
+        );
+        return;
+      }
+
+      if (data.session) {
+        // El middleware ahora maneja la sesión via Supabase Auth,
+        // ya no necesitamos la cookie manual
+        window.location.href = redirectTo;
+      } else {
+        setError("Necesitás confirmar tu email antes de ingresar.");
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setError("Error interno del servidor.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF0F4] flex flex-col font-dm-sans">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center p-6 mt-10">
-        <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-xl overflow-hidden border border-[#E8A0B4]/20">
-          <div className="p-8 pt-12 text-center">
-            <h1 className="font-playfair text-3xl font-bold text-[#1A1A22] mb-2">
-              {isRegister ? "Unite a la academia" : "¡Hola de nuevo!"}
-            </h1>
-            <p className="text-[#8A8A99] text-[0.85rem] mb-8 leading-relaxed">
-              {isRegister 
-                ? "Creá tu cuenta para gestionar tus clases y turnos." 
-                : "Ingresá con tu email y contraseña para reservar."}
-            </p>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#1A1A22] to-[#2A1F2E]">
+      {/* Fondos decorativos */}
+      <div className="absolute -top-[200px] -left-[200px] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(232,160,180,0.12)_0%,transparent_65%)] pointer-events-none" />
+      <div className="absolute -bottom-[150px] -right-[150px] w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(201,122,150,0.1)_0%,transparent_65%)] pointer-events-none" />
 
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div className="text-left">
-                <label className="text-[0.7rem] font-bold text-[#C97A96] uppercase ml-1">Email</label>
-                <input 
-                  type="email" placeholder="ejemplo@mail.com" required
-                  className="w-full border border-[#E8A0B4]/30 rounded-2xl px-5 py-3.5 outline-none focus:border-[#C97A96] transition-all bg-[#F7F7F9]/50 text-sm"
-                  value={email} onChange={e => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="text-left">
-                <label className="text-[0.7rem] font-bold text-[#C97A96] uppercase ml-1">Contraseña</label>
-                <input 
-                  type="password" placeholder="••••••••" required
-                  className="w-full border border-[#E8A0B4]/30 rounded-2xl px-5 py-3.5 outline-none focus:border-[#C97A96] transition-all bg-[#F7F7F9]/50 text-sm"
-                  value={password} onChange={e => setPassword(e.target.value)}
-                />
-              </div>
-              
-              <button 
-                disabled={loading}
-                className="w-full bg-[#1A1A22] text-white py-4 rounded-2xl font-bold text-sm hover:bg-[#C97A96] transition-all shadow-lg uppercase tracking-widest disabled:opacity-50 mt-2"
-              >
-                {loading ? "Procesando..." : (isRegister ? "Crear cuenta ✦" : "Entrar a mi cuenta ✦")}
-              </button>
-            </form>
-
-            <div className="mt-8 flex flex-col gap-3">
-              <button 
-                onClick={() => setIsRegister(!isRegister)}
-                className="text-sm text-[#4A4A55] font-medium hover:text-[#C97A96] transition-colors"
-              >
-                {isRegister ? "¿Ya tenés cuenta? Iniciá sesión" : "¿Sos nueva? Registrate acá"}
-              </button>
-
-              {!isRegister && (
-                <button 
-                  type="button"
-                  onClick={handleResetPassword}
-                  className="text-[0.75rem] text-[#8A8A99] hover:underline"
-                >
-                  Olvidé mi contraseña
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="bg-[#F7F7F9] p-6 text-center border-t border-[#E8A0B4]/10">
-             <Link href="/" className="text-xs text-[#8A8A99] hover:text-[#C97A96]">
-                ← Volver al inicio
-             </Link>
-          </div>
+      <div className="bg-white/5 border border-[#E8A0B4]/15 rounded-3xl p-11 w-full max-w-[400px] backdrop-blur-md relative z-10">
+        <div className="font-playfair text-3xl font-semibold text-white text-center mb-1">
+          R.G <span className="text-[#E8A0B4]">Danza</span>
         </div>
+        <div className="text-center text-[0.78rem] text-white/35 mb-8 tracking-wide">
+          Panel de administración
+        </div>
+
+        <form onSubmit={handleLogin}>
+          <div className="mb-4">
+            <label className="block text-[0.75rem] font-medium text-white/45 mb-1.5 tracking-wide">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-[0.9rem] text-white outline-none placeholder-white/20 focus:border-[#C97A96] transition-all"
+            />
+          </div>
+          <div className="mb-6">
+            <label className="block text-[0.75rem] font-medium text-white/45 mb-1.5 tracking-wide">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-[0.9rem] text-white outline-none placeholder-white/20 focus:border-[#C97A96] transition-all"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-[0.8rem] p-3 rounded-xl mb-4 text-center">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#C97A96] text-white rounded-full py-3.5 text-[0.9rem] font-semibold hover:bg-[#4A4A55] transition-all shadow-[0_4px_20px_rgba(201,122,150,0.35)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Verificando..." : "Ingresar al panel →"}
+          </button>
+        </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A22] to-[#2A1F2E]">
+        <div className="text-white/30 text-sm">Cargando...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
