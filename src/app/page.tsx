@@ -483,35 +483,125 @@ export default function HomePage() {
 
 // ── Formulario de inscripción ──────────────────────────────────
 function InscripcionForm({ telefonoDinamico, clases }: { telefonoDinamico: string; clases: any[] }) {
+  const [nombre, setNombre] = useState('')
+  const [apellido, setApellido] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [disciplina, setDisciplina] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [enviado, setEnviado] = useState(false)
+  const [error, setError] = useState('')
+ 
   const inp: React.CSSProperties = {
     width: '100%', border: '1.5px solid rgba(232,160,180,0.3)',
-    borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', outline: 'none'
+    borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', outline: 'none',
   }
   const numeroLimpio = telefonoDinamico.replace(/\D/g, '')
-
-  return (
-    <form onSubmit={(e) => e.preventDefault()}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-        <input style={inp} type="text" placeholder="Nombre" />
-        <input style={inp} type="text" placeholder="Apellido" />
+ 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nombre || !telefono) return
+    setEnviando(true)
+    setError('')
+ 
+    // Guardamos en la tabla reservas con estado 'pendiente'
+    // Usamos la fecha de hoy y horario 'A coordinar'
+    const hoy = new Date()
+    const fechaISO = new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split('T')[0]
+ 
+    const { error: err } = await supabase.from('reservas').insert([{
+      nombre,
+      apellido,
+      telefono,
+      disciplina: disciplina || 'Asesoramiento',
+      fecha: fechaISO,
+      horario: 'A coordinar',
+      estado: 'pendiente',
+    }])
+ 
+    setEnviando(false)
+ 
+    if (err) {
+      setError('Hubo un error al enviar. Intentá de nuevo.')
+      return
+    }
+ 
+    setEnviado(true)
+    setNombre('')
+    setApellido('')
+    setTelefono('')
+    setDisciplina('')
+  }
+ 
+  // Estado de éxito
+  if (enviado) {
+    return (
+      <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.4rem', color: 'var(--negro)', marginBottom: '0.5rem' }}>
+          ¡Recibimos tu consulta!
+        </h3>
+        <p style={{ color: 'var(--gris-l)', fontSize: '0.88rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          En breve nos comunicamos con vos por WhatsApp para coordinar tu clase de prueba.
+        </p>
+        <button
+          onClick={() => setEnviado(false)}
+          style={{
+            background: 'transparent', border: '1.5px solid var(--rosa-light)',
+            color: 'var(--rosa-d)', padding: '0.6rem 1.5rem',
+            borderRadius: 100, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500,
+          }}
+        >
+          Enviar otra consulta
+        </button>
       </div>
-      <input style={{ ...inp, marginBottom: '1.25rem' }} type="tel" placeholder="Teléfono" />
-      <select style={{ ...inp, marginBottom: '1.25rem' }}>
+    )
+  }
+ 
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+        <input
+          style={inp} type="text" placeholder="Nombre" required
+          value={nombre} onChange={e => setNombre(e.target.value)}
+        />
+        <input
+          style={inp} type="text" placeholder="Apellido"
+          value={apellido} onChange={e => setApellido(e.target.value)}
+        />
+      </div>
+      <input
+        style={{ ...inp, marginBottom: '1.25rem' }}
+        type="tel" placeholder="Teléfono (WhatsApp)" required
+        value={telefono} onChange={e => setTelefono(e.target.value)}
+      />
+      <select
+        style={{ ...inp, marginBottom: '1.25rem' }}
+        value={disciplina} onChange={e => setDisciplina(e.target.value)}
+      >
         <option value="">Seleccioná una clase</option>
         {clases.map(c => (
           <option key={c.id} value={c.nombre}>{c.nombre}</option>
         ))}
-        <option value="asesoramiento">Quiero asesoramiento</option>
+        <option value="Asesoramiento">Quiero asesoramiento</option>
       </select>
+ 
+      {error && (
+        <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</p>
+      )}
+ 
       <button
         type="submit"
+        disabled={enviando}
         style={{
-          width: '100%', background: 'var(--rosa-d)', color: '#fff',
-          border: 'none', borderRadius: 100, padding: '0.9rem',
-          fontWeight: 600, cursor: 'pointer'
+          width: '100%', background: enviando ? '#ccc' : 'var(--rosa-d)',
+          color: '#fff', border: 'none', borderRadius: 100,
+          padding: '0.9rem', fontWeight: 600, cursor: enviando ? 'not-allowed' : 'pointer',
+          transition: 'background 0.2s',
         }}
       >
-        Enviar inscripción →
+        {enviando ? 'Enviando...' : 'Enviar inscripción →'}
       </button>
       <a
         href={`https://wa.me/${numeroLimpio}`}
