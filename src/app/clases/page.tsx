@@ -45,10 +45,10 @@ export default function ClasesPage() {
       try {
         // 1. Traemos las clases activas
         const { data: clasesData } = await supabase
-          .from("clases")
-          .select("*")
-          .eq("estado", "activa")
-          .order("nombre");
+            .from("clases")
+            .select("*")
+            .or("estado.eq.activa,estado.is.null")
+            .order("nombre");
 
         // 2. Traemos todos los horarios
         const { data: horariosData } = await supabase
