@@ -46,6 +46,7 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    document.cookie = "rg-admin-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.push("/admin/login");
   };
 
@@ -61,18 +62,19 @@ export default function Sidebar() {
     {
       section: "Gestión",
       links: [
-        { name: "Turnos",   path: "/admin/turnos",   icon: "📅", badge: turnosPendientes > 0 ? turnosPendientes.toString() : null },
-        { name: "Alumnas",  path: "/admin/clientes", icon: "👥" },
-        { name: "Pagos",    path: "/admin/pagos",    icon: "💰" },   // ← NUEVO
-        { name: "Galería",  path: "/admin/galeria",  icon: "📸" },
-        { name: "Profesores", path: "/admin/profesores", icon: "🧑‍🏫" },
+        { name: "Turnos",      path: "/admin/turnos",      icon: "📅", badge: turnosPendientes > 0 ? turnosPendientes.toString() : null },
+        { name: "Alumnas",     path: "/admin/clientes",    icon: "👥" },
+        { name: "Pagos",       path: "/admin/pagos",       icon: "💰" },
+        { name: "Galería",     path: "/admin/galeria",     icon: "📸" },
+        { name: "Profesores",  path: "/admin/profesores",  icon: "🧑‍🏫" },
       ],
     },
     {
       section: "Academia",
       links: [
-        { name: "Horarios", path: "/admin/horarios", icon: "🕐" },
-        { name: "Clases",   path: "/admin/clases",   icon: "💃" },
+        { name: "Horarios",       path: "/admin/horarios",       icon: "🕐" },
+        { name: "Clases",         path: "/admin/clases",         icon: "💃" },
+        { name: "Configuración",  path: "/admin/configuracion",  icon: "⚙️" },
       ],
     },
   ];
@@ -97,7 +99,7 @@ export default function Sidebar() {
               {group.section}
             </div>
             {group.links.map((link) => {
-              const isActive = pathname.startsWith(link.path);
+              const isActive = pathname === link.path || pathname.startsWith(link.path + '/');
               return (
                 <Link
                   key={link.name}
