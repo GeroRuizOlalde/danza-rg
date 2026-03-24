@@ -171,8 +171,14 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="font-dm-sans">
-      <div className="flex items-start justify-between mb-7">
+    <div className="font-dm-sans relative overflow-hidden">
+      {/* SVG decorativo de fondo */}
+      <svg className="absolute bottom-0 right-0 w-[420px] h-[420px] pointer-events-none" style={{ opacity: 0.035 }} viewBox="0 0 200 200" fill="#C97A96">
+        <path d="M100 10c-2 0-4 8-6 12-3 6-8 10-10 18-1 5 1 10 0 15-2 8-8 14-8 22 0 6 4 11 6 16 2 6 2 12 5 17 4 6 10 8 16 12 5 3 10 7 16 8 8 1 16-2 24-1 6 1 11 5 16 4 7-2 12-8 15-15 2-5 1-11 2-17 1-8 6-15 4-23-1-6-6-10-9-15-3-6-4-13-9-17-6-5-14-6-21-8-5-2-10-5-15-7-4-2-8-6-10-10-3-5-8-11-16-11z"/>
+        <path d="M85 95c-1 8-4 16-2 24 2 6 7 10 10 15 4 7 5 15 10 21 4 5 10 7 15 11 6 4 11 10 18 12 5 1 10-1 15 0 8 2 14 8 22 8 6 0 11-4 16-6 6-2 12-2 17-5 6-4 8-10 12-16"/>
+      </svg>
+
+      <div className="flex items-start justify-between mb-7 relative z-10">
         <div>
           <h1 className="font-playfair text-[1.6rem] font-semibold text-[#1A1A22]">
             Buen día, <em className="italic text-[#C97A96]">{adminName}</em> 👋
@@ -298,15 +304,31 @@ export default function DashboardPage() {
               <div>
                 <p className="text-[0.65rem] font-black text-[#8A8A99] uppercase tracking-widest mb-3">Próximos 7 días:</p>
                 {proximosCumples.length > 0 ? (
-                  <div className="space-y-3">
-                    {proximosCumples.map((p, i) => (
-                      <div key={i} className="flex justify-between items-center text-[0.8rem] py-2 border-b border-gray-50 last:border-0">
-                        <span className="text-[#4A4A55]">{p.nombre} {p.apellido}</span>
-                        <span className="font-bold text-[#C97A96]">
-                          {new Date(p.fecha_nacimiento + 'T12:00:00').getDate()} {MESES[new Date(p.fecha_nacimiento + 'T12:00:00').getMonth()].slice(0, 3)}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-2.5">
+                    {proximosCumples.map((p, i) => {
+                      const cumpleDate = new Date(p.fecha_nacimiento + 'T12:00:00');
+                      const dia = cumpleDate.getDate();
+                      const mesCorto = MESES[cumpleDate.getMonth()].slice(0, 3);
+                      return (
+                        <div key={i} className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl border border-[#E8A0B4]/10 hover:bg-[#FDF0F4]/40 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-[#FDF0F4] flex items-center justify-center text-sm shrink-0">🎂</div>
+                            <span className="text-[0.8rem] text-[#4A4A55] font-medium truncate">{p.nombre} {p.apellido}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[0.72rem] font-bold text-[#C97A96] bg-[#FDF0F4] px-2 py-0.5 rounded-full">{dia} {mesCorto}</span>
+                            <button
+                              onClick={() => {
+                                const tel = p.telefono?.replace(/\D/g, '');
+                                if (tel) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(`¡Hola ${p.nombre}! 🎂 Te queríamos saludar desde R.G Danza por tu cumpleaños. ¡Que tengas un hermoso día! 🎉💗`)}`);
+                              }}
+                              title="Saludar por WhatsApp"
+                              className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center text-xs border border-emerald-100"
+                            >💬</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">No hay cumples esta semana.</p>

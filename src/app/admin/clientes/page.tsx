@@ -48,6 +48,27 @@ export default function ClientesPage() {
     nota: "",
   });
   const [guardandoPago, setGuardandoPago] = useState(false);
+  const [enviarComprobante, setEnviarComprobante] = useState(false);
+
+  // Modal edición alumna
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: "",
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    email: "",
+    fecha_nacimiento: "",
+    estado: "nueva",
+    fecha_inicio: "",
+  });
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
+
+  // Modal avisos masivos
+  const [isAvisoModalOpen, setIsAvisoModalOpen] = useState(false);
+  const [avisoMensaje, setAvisoMensaje] = useState("");
+  const [avisando, setAvisando] = useState(false);
+  const [avisoProgreso, setAvisoProgreso] = useState({ enviados: 0, total: 0 });
 
   useEffect(() => { fetchClientes(); }, []);
 
@@ -117,8 +138,128 @@ export default function ClientesPage() {
       toast.error("Error al registrar: " + error.message);
     } else {
       toast.success(`Pago registrado para ${alumnaParaPago.nombre}`);
+      // Enviar comprobante por WhatsApp si está marcado
+      if (enviarComprobante) {
+        const alumna = clientes.find(c => c.id === alumnaParaPago.id);
+        const tel = alumna?.telefono?.replace(/\D/g, "");
+        if (tel) {
+          const fechaFormateada = new Date(pagoForm.fecha_pago + "T12:00:00").toLocaleDateString("es-AR");
+          const msg = encodeURIComponent(
+            `✨ *Comprobante de Pago — R.G Danza* ✨\n\n` +
+            `👤 *Alumna:* ${alumnaParaPago.nombre} ${alumnaParaPago.apellido}\n` +
+            `💰 *Monto:* $${parseFloat(pagoForm.monto).toLocaleString("es-AR")}\n` +
+            `📅 *Mes:* ${pagoForm.mes_correspondiente}\n` +
+            `💳 *Método:* ${pagoForm.metodo_pago}\n` +
+            `🗓️ *Fecha:* ${fechaFormateada}\n` +
+            (pagoForm.nota ? `📝 *Nota:* ${pagoForm.nota}\n` : "") +
+            `\n¡Gracias por ser parte de R.G Danza! 💗`
+          );
+          window.open(`https://wa.me/${tel}?text=${msg}`, "_blank");
+        } else {
+          toast.error("No se pudo enviar el comprobante: sin teléfono registrado.");
+        }
+      }
       setIsPagoModalOpen(false);
+      setEnviarComprobante(false);
     }
+  };
+
+  // Handler edición alumna
+  const abrirModalEdicion = async (alumna: Alumna, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    // Buscar fecha_inicio en alumna_clases
+    const { data: inscripcion } = await supabase
+      .from("alumna_clases")
+      .select("fecha_inicio")
+      .eq("alumna_id", alumna.id)
+      .order("fecha_inicio", { ascending: true })
+      .limit(1)
+      .single();
+
+    setEditForm({
+      id: alumna.id,
+      nombre: alumna.nombre || "",
+      apellido: alumna.apellido || "",
+      telefono: alumna.telefono || "",
+      email: alumna.email || "",
+      fecha_nacimiento: alumna.fecha_nacimiento || "",
+      estado: alumna.estado || "nueva",
+      fecha_inicio: inscripcion?.fecha_inicio || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleGuardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm.id) return;
+    setGuardandoEdit(true);
+
+    const { error: errPerfil } = await supabase
+      .from("perfiles")
+      .update({
+        nombre: editForm.nombre,
+        apellido: editForm.apellido,
+        telefono: editForm.telefono,
+        email: editForm.email || null,
+        fecha_nacimiento: editForm.fecha_nacimiento || null,
+        estado: editForm.estado,
+      })
+      .eq("id", editForm.id);
+
+    if (errPerfil) {
+      toast.error("Error al guardar: " + errPerfil.message);
+      setGuardandoEdit(false);
+      return;
+    }
+
+    // Actualizar fecha_inicio en alumna_clases si se proporcionó
+    if (editForm.fecha_inicio) {
+      const { data: inscExistente } = await supabase
+        .from("alumna_clases")
+        .select("id")
+        .eq("alumna_id", editForm.id)
+        .limit(1)
+        .single();
+
+      if (inscExistente) {
+        await supabase
+          .from("alumna_clases")
+          .update({ fecha_inicio: editForm.fecha_inicio })
+          .eq("id", inscExistente.id);
+      }
+    }
+
+    toast.success(`Datos de ${editForm.nombre} actualizados`);
+    setIsEditModalOpen(false);
+    setGuardandoEdit(false);
+    await fetchClientes();
+  };
+
+  // Handler avisos masivos
+  const handleEnviarAvisoMasivo = async () => {
+    const alumnaConTel = clientes.filter(c => c.telefono?.replace(/\D/g, ""));
+    if (alumnaConTel.length === 0) {
+      toast.error("No hay alumnas con teléfono registrado.");
+      return;
+    }
+    setAvisando(true);
+    setAvisoProgreso({ enviados: 0, total: alumnaConTel.length });
+
+    for (let i = 0; i < alumnaConTel.length; i++) {
+      const tel = alumnaConTel[i].telefono.replace(/\D/g, "");
+      const msgPersonalizado = avisoMensaje.replace("{nombre}", alumnaConTel[i].nombre || "");
+      const msg = encodeURIComponent(msgPersonalizado);
+      window.open(`https://wa.me/${tel}?text=${msg}`, "_blank");
+      setAvisoProgreso({ enviados: i + 1, total: alumnaConTel.length });
+      if (i < alumnaConTel.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    setAvisando(false);
+    toast.success(`Mensaje enviado a ${alumnaConTel.length} alumnas`);
+    setIsAvisoModalOpen(false);
+    setAvisoMensaje("");
   };
 
   const toggleCheckbox = async (id: string, campo: string, valorActual: boolean, e: React.MouseEvent) => {
@@ -202,6 +343,12 @@ export default function ClientesPage() {
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C97A96] opacity-50 text-sm">🔍</span>
           </div>
+          <button
+            onClick={() => { setAvisoMensaje("¡Hola {nombre}! 👋 Te escribimos de R.G Danza. 🎀\n\n"); setIsAvisoModalOpen(true); }}
+            className="bg-white border border-[#E8A0B4]/30 text-[#C97A96] rounded-full px-5 py-2.5 text-[0.82rem] font-semibold hover:bg-[#FDF0F4] hover:border-[#C97A96] transition-all whitespace-nowrap"
+          >
+            📢 Avisar a todas
+          </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-[#C97A96] text-white rounded-full px-6 py-2.5 text-[0.82rem] font-semibold hover:bg-[#1A1A22] transition-all shadow-md whitespace-nowrap"
@@ -408,7 +555,13 @@ export default function ClientesPage() {
                         </div>
 
                         {/* Botones expandidos */}
-                        <div className="ml-[44px] flex gap-2 mt-3">
+                        <div className="ml-[44px] flex flex-wrap gap-2 mt-3">
+                          <button
+                            onClick={(e) => abrirModalEdicion(c, e)}
+                            className="inline-flex items-center gap-1.5 bg-[#1A1A22] text-white px-4 py-2 rounded-full text-[0.75rem] font-bold hover:bg-[#C97A96] transition-colors"
+                          >
+                            ✏️ Editar
+                          </button>
                           <button
                             onClick={(e) => enviarWhatsApp(c.telefono, c.nombre, e)}
                             className="inline-flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-full text-[0.75rem] font-bold hover:bg-emerald-700 transition-colors"
@@ -491,6 +644,175 @@ export default function ClientesPage() {
         </div>
       )}
 
+      {/* ══════════ MODAL: EDITAR ALUMNA ══════════ */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-md p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-[#E8A0B4]/20">
+            <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
+              <div>
+                <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">Editar Alumna</h3>
+                <p className="text-[0.8rem] text-[#C97A96] font-medium mt-0.5">{editForm.nombre} {editForm.apellido}</p>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-[#C97A96] hover:text-[#1A1A22] text-xl transition-colors">✕</button>
+            </div>
+            <form onSubmit={handleGuardarEdicion} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Nombre *</label>
+                  <input
+                    required type="text"
+                    value={editForm.nombre}
+                    onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Apellido *</label>
+                  <input
+                    required type="text"
+                    value={editForm.apellido}
+                    onChange={e => setEditForm({...editForm, apellido: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Teléfono</label>
+                  <input
+                    type="tel"
+                    value={editForm.telefono}
+                    onChange={e => setEditForm({...editForm, telefono: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm({...editForm, email: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Fecha de Nacimiento</label>
+                  <input
+                    type="date"
+                    value={editForm.fecha_nacimiento}
+                    onChange={e => setEditForm({...editForm, fecha_nacimiento: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Estado</label>
+                  <select
+                    value={editForm.estado}
+                    onChange={e => setEditForm({...editForm, estado: e.target.value})}
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
+                  >
+                    <option value="nueva">Nueva</option>
+                    <option value="activa">Activa</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Fecha de Inicio (inscripción real)</label>
+                <input
+                  type="date"
+                  value={editForm.fecha_inicio}
+                  onChange={e => setEditForm({...editForm, fecha_inicio: e.target.value})}
+                  className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                />
+                <p className="text-[0.7rem] text-[#8A8A99] mt-1">Fecha real en la que la alumna empezó. Se guarda en alumna_clases.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-full font-semibold text-sm hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoEdit || !editForm.nombre || !editForm.apellido}
+                  className="flex-[2] bg-[#C97A96] text-white py-3 rounded-full font-semibold text-sm hover:bg-[#1A1A22] transition-all shadow-md disabled:opacity-50"
+                >
+                  {guardandoEdit ? "Guardando..." : "Guardar Cambios ✓"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ MODAL: AVISO MASIVO ══════════ */}
+      {isAvisoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-md p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-[#E8A0B4]/20">
+            <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
+              <div>
+                <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">📢 Aviso Masivo</h3>
+                <p className="text-[0.8rem] text-[#8A8A99] mt-0.5">
+                  Se enviará a {clientes.filter(c => c.telefono?.replace(/\D/g, "")).length} alumnas con teléfono
+                </p>
+              </div>
+              <button onClick={() => { if (!avisando) setIsAvisoModalOpen(false); }} className="text-[#C97A96] hover:text-[#1A1A22] text-xl transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-2">Mensaje</label>
+                <textarea
+                  rows={5}
+                  value={avisoMensaje}
+                  onChange={e => setAvisoMensaje(e.target.value)}
+                  placeholder="Escribí tu mensaje... Usá {nombre} para personalizar."
+                  className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all resize-none"
+                />
+                <p className="text-[0.7rem] text-[#8A8A99] mt-1">Tip: Usá <strong>{"{nombre}"}</strong> y se reemplazará por el nombre de cada alumna.</p>
+              </div>
+
+              {avisando && (
+                <div className="bg-[#FDF0F4] rounded-xl p-4 border border-[#E8A0B4]/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[0.82rem] font-semibold text-[#1A1A22]">Enviando mensajes...</span>
+                    <span className="text-[0.82rem] font-bold text-[#C97A96]">{avisoProgreso.enviados}/{avisoProgreso.total}</span>
+                  </div>
+                  <div className="w-full bg-[#E8A0B4]/20 rounded-full h-2">
+                    <div
+                      className="bg-[#C97A96] h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${avisoProgreso.total > 0 ? (avisoProgreso.enviados / avisoProgreso.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { if (!avisando) setIsAvisoModalOpen(false); }}
+                  disabled={avisando}
+                  className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-full font-semibold text-sm hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEnviarAvisoMasivo}
+                  disabled={avisando || !avisoMensaje.trim()}
+                  className="flex-[2] bg-[#C97A96] text-white py-3 rounded-full font-semibold text-sm hover:bg-[#1A1A22] transition-all shadow-md disabled:opacity-50"
+                >
+                  {avisando ? `Enviando ${avisoProgreso.enviados}/${avisoProgreso.total}...` : "Enviar a Todas →"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ MODAL: REGISTRAR PAGO ══════════ */}
       {isPagoModalOpen && alumnaParaPago && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-md p-4">
@@ -553,9 +875,21 @@ export default function ClientesPage() {
                   className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
                 />
               </div>
+              <label className="flex items-center gap-3 py-3 px-4 bg-[#FDF0F4]/60 rounded-xl border border-[#E8A0B4]/15 cursor-pointer hover:bg-[#FDF0F4] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={enviarComprobante}
+                  onChange={(e) => setEnviarComprobante(e.target.checked)}
+                  className="w-4 h-4 accent-[#C97A96] rounded"
+                />
+                <div>
+                  <span className="text-[0.82rem] font-semibold text-[#1A1A22]">Enviar comprobante por WhatsApp</span>
+                  <p className="text-[0.7rem] text-[#8A8A99] mt-0.5">Se abrirá WhatsApp con el detalle del pago</p>
+                </div>
+              </label>
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => setIsPagoModalOpen(false)}
+                  onClick={() => { setIsPagoModalOpen(false); setEnviarComprobante(false); }}
                   className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-all"
                 >
                   Cancelar

@@ -46,6 +46,11 @@ export default async function HomePage() {
         {/* Glow decorativo */}
         <div className="absolute -top-[200px] -right-[200px] w-[700px] h-[700px] bg-[radial-gradient(circle,rgba(232,160,180,0.18)_0%,transparent_70%)] pointer-events-none" />
 
+        {/* SVG bailarina arabesque - esquina inferior izquierda */}
+        <svg className="absolute bottom-12 left-8 w-[280px] h-[280px] pointer-events-none hidden md:block" style={{ opacity: 0.05 }} viewBox="0 0 200 200" fill="#C97A96">
+          <path d="M95 25c-1 3-3 5-4 8-1 4 0 8-2 11-2 4-6 6-7 10-1 3 0 7 1 10 2 5 5 9 6 14 0 3-1 6-1 9 0 4 2 8 1 12-1 3-4 5-5 8-2 5-1 11 1 16 1 3 3 5 5 7 3 3 7 4 10 6 4 3 7 7 11 9 3 1 6 2 9 1 4-1 7-4 10-6 2-2 4-5 7-6 4-1 8 1 12 0 3-1 5-3 7-5 2-3 2-7 3-10 1-5 0-10 2-14 1-2 3-4 5-5 3-2 7-2 10-4 2-1 3-4 3-7 0-4-2-8-1-12 1-3 3-5 4-8 2-5 1-11-1-16-1-3-3-5-5-7-3-3-7-5-11-6-3-1-7-1-10 0-4 1-8 1-12 1-3 0-6-1-8-3-3-3-5-6-6-10-1-3-1-7 0-10z"/>
+        </svg>
+
         <div className="p-8 md:p-[5%_5%_5%_8%] animate-[fadeUp_0.9s_ease_both]">
           <div className="inline-flex items-center gap-2 bg-[#F5D0DC] text-[#C97A96] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase mb-6">
             ✦ Academia de Danza
@@ -86,7 +91,12 @@ export default async function HomePage() {
       </section>
 
       {/* ── QUIÉNES SOMOS ── */}
-      <section id="nosotros" className="py-16 md:py-24 px-[5%] md:px-[8%] bg-[#F7F7F9] grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center relative">
+      <section id="nosotros" className="py-16 md:py-24 px-[5%] md:px-[8%] bg-[#F7F7F9] grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center relative overflow-hidden">
+        {/* SVG bailarina en puntas - esquina superior derecha */}
+        <svg className="absolute -top-4 -right-8 w-[320px] h-[320px] pointer-events-none hidden md:block" style={{ opacity: 0.04 }} viewBox="0 0 200 200" fill="#C97A96">
+          <path d="M100 15c0 5-2 10-2 15 0 4 2 7 2 11-1 5-4 9-4 14 0 4 2 8 3 12 1 5 0 10-2 14-2 4-6 7-8 11-1 4 0 8 1 12 2 5 6 8 8 12 2 5 2 10 1 15-1 4-4 7-6 10-3 4-5 8-6 13-1 4 1 8 3 11 3 4 7 6 10 9 4 3 8 5 12 6 3 0 6-1 9-3 3-3 5-7 7-11 1-3 1-7 3-10 2-4 6-7 8-11 1-3 1-7-1-10-2-4-6-7-9-10-2-2-3-5-3-8-1-5 1-10 3-14 1-3 3-5 4-8 2-5 2-10 0-15-1-4-4-7-6-10-3-4-7-7-10-9-2-2-4-3-6-4-3-1-6-1-8 1"/>
+        </svg>
+
         <div className="fade-in relative rounded-3xl overflow-hidden aspect-[4/5] shadow-[0_24px_64px_rgba(201,122,150,0.2)]">
           <Image
             src="https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=700&q=80"
@@ -151,7 +161,11 @@ export default async function HomePage() {
       </section>
 
       {/* ── INSCRIPCIÓN ── */}
-      <section id="inscripcion" className="py-16 md:py-24 px-[5%] md:px-[8%] bg-[#FDF0F4] grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
+      <section id="inscripcion" className="py-16 md:py-24 px-[5%] md:px-[8%] bg-[#FDF0F4] grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center relative overflow-hidden">
+        {/* SVG bailarina contemporánea - esquina inferior derecha */}
+        <svg className="absolute -bottom-6 -right-6 w-[260px] h-[260px] pointer-events-none hidden md:block" style={{ opacity: 0.06 }} viewBox="0 0 200 200" fill="#C97A96">
+          <path d="M90 20c-2 4-5 7-6 12-1 4 1 8 0 12-1 5-5 8-7 12-1 4 0 9 2 13 2 3 5 5 7 8 3 5 4 11 3 17-1 4-4 7-5 11-1 5 0 10 2 14 3 5 7 8 11 11 3 2 7 3 10 5 4 3 6 7 9 10 2 2 5 3 8 3 4 0 8-2 11-5 2-2 3-5 5-8 3-4 7-7 9-12 1-3 0-7-2-10-2-4-6-6-9-8-2-2-3-5-4-8-1-4-1-9 0-13 1-3 3-5 4-8 2-5 2-11 0-16-1-4-4-7-6-10-3-4-5-9-5-14 0-4 2-7 3-10 2-4 1-9-1-13-1-3-3-5-5-7z"/>
+        </svg>
         <div className="fade-in">
           <h2 className="font-playfair text-[clamp(2rem,3.5vw,2.8rem)] font-bold text-[#1A1A22]">
             ¿Lista para<br />
