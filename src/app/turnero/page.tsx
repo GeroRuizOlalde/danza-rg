@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 // --- TIPOS ---
 type ClaseDB = { id: string; nombre: string; edades: string; estado: string };
@@ -259,7 +260,7 @@ export default function TurneroPage() {
       if (error) throw error;
       setStep(5);
     } catch (e: any) {
-      alert("Error al guardar la reserva: " + e.message);
+      toast.error("Error al guardar la reserva: " + e.message);
     } finally {
       setIsSubmitting(false);
     }

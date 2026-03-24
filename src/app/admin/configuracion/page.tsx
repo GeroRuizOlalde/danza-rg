@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<"perfil" | "academia">("perfil");
@@ -48,8 +49,8 @@ export default function ConfiguracionPage() {
       data: { display_name: perfil.nombre }
     });
     setGuardando(false);
-    if (error) alert("Error al guardar perfil.");
-    else alert("¡Perfil actualizado! (Recarga la página para ver los cambios en el menú)");
+    if (error) toast.error("Error al guardar perfil.");
+    else toast.success("¡Perfil actualizado!");
   };
 
   // --- GUARDAR ACADEMIA ---
@@ -65,8 +66,8 @@ export default function ConfiguracionPage() {
     }).eq("id", academia.id);
     
     setGuardando(false);
-    if (error) alert("Error al guardar los datos de la academia.");
-    else alert("¡Datos de la academia actualizados correctamente!");
+    if (error) toast.error("Error al guardar los datos de la academia.");
+    else toast.success("¡Datos de la academia actualizados!");
   };
 
   if (cargando) return <div className="flex h-[50vh] items-center justify-center text-[#8A8A99]">Cargando configuración...</div>;

@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { invitarAlumnaAction } from "./actions";
+import toast from "react-hot-toast";
+import { mesActualStr, calcularEdad } from "@/lib/utils";
 
 type Alumna = {
   id: string;
@@ -22,20 +24,6 @@ type PerfilPago = { id: string; nombre: string; apellido: string };
 const FILTROS = ["Todas", "Activas", "Nuevas", "Pendientes Doc"];
 const METODOS_PAGO = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
 
-function mesActualStr() {
-  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const hoy = new Date();
-  return `${meses[hoy.getMonth()]} ${hoy.getFullYear()}`;
-}
-
-function calcularEdad(fechaNac: string): string {
-  if (!fechaNac) return "—";
-  const hoy = new Date();
-  const f = new Date(fechaNac + "T12:00:00");
-  let edad = hoy.getFullYear() - f.getFullYear();
-  if (hoy.getMonth() < f.getMonth() || (hoy.getMonth() === f.getMonth() && hoy.getDate() < f.getDate())) edad--;
-  return `${edad} años`;
-}
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Alumna[]>([]);
@@ -86,12 +74,12 @@ export default function ClientesPage() {
     try {
       const result = await invitarAlumnaAction(formInscribir.email, formInscribir.nombre, formInscribir.apellido);
       if (result.success) {
-        alert(`¡Invitación enviada a ${formInscribir.email}!`);
+        toast.success(`¡Invitación enviada a ${formInscribir.email}!`);
         setIsModalOpen(false);
         setFormInscribir({ nombre: "", apellido: "", email: "" });
         await fetchClientes();
       } else {
-        alert("Error: " + result.error);
+        toast.error("Error: " + result.error);
       }
     } finally {
       setIsSubmitting(false);
@@ -126,9 +114,9 @@ export default function ClientesPage() {
     }]);
     setGuardandoPago(false);
     if (error) {
-      alert("Error al registrar: " + error.message);
+      toast.error("Error al registrar: " + error.message);
     } else {
-      alert(`✅ Pago registrado para ${alumnaParaPago.nombre}`);
+      toast.success(`Pago registrado para ${alumnaParaPago.nombre}`);
       setIsPagoModalOpen(false);
     }
   };
@@ -144,7 +132,7 @@ export default function ClientesPage() {
   const enviarWhatsApp = (telefono: string, nombre: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const tel = telefono?.replace(/\D/g, "");
-    if (!tel) { alert(`Sin teléfono registrado para ${nombre}.`); return; }
+    if (!tel) { toast.error(`Sin teléfono registrado para ${nombre}.`); return; }
     const msg = encodeURIComponent(`¡Hola ${nombre}! 👋 Te escribimos de R.G Danza. 🎀`);
     window.open(`https://wa.me/${tel}?text=${msg}`, "_blank");
   };

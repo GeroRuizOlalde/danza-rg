@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
+import { getIniciales, getAvatarColor } from "@/lib/utils";
 
 type Reserva = {
   id: string;
@@ -71,7 +73,7 @@ export default function TurnosPage() {
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
     const { error } = await supabase.from('reservas').update({ estado: nuevoEstado }).eq('id', id);
     if (error) {
-      alert("Error al actualizar el estado.");
+      toast.error("Error al actualizar el estado.");
       return;
     }
     setTurnos(prev => prev.map(t => t.id === id ? { ...t, estado: nuevoEstado } : t));
@@ -81,14 +83,14 @@ export default function TurnosPage() {
   const handleCrearTurno = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoTurno.nombre || !nuevoTurno.fecha || !nuevoTurno.horario || !nuevoTurno.disciplina) {
-      alert("Completá todos los campos obligatorios.");
+      toast.error("Completá todos los campos obligatorios.");
       return;
     }
     setGuardando(true);
     const { error } = await supabase.from('reservas').insert([nuevoTurno]);
     setGuardando(false);
     if (error) {
-      alert("Error al crear el turno: " + error.message);
+      toast.error("Error al crear el turno: " + error.message);
       return;
     }
     setIsModalOpen(false);
@@ -103,19 +105,10 @@ export default function TurnosPage() {
       setTurnos(prev => prev.filter(t => t.id !== id));
       setDeletingId(null);
     } else {
-      alert("Error al eliminar.");
+      toast.error("Error al eliminar.");
     }
   };
 
-  const getIniciales = (nombre: string, apellido: string) =>
-    `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
-
-  const getAvatarColor = (id: string) => {
-    const colors = ["bg-[#E8A0B4]/20 text-[#C97A96]", "bg-[#2DB87A]/15 text-[#2DB87A]", "bg-[#4A4A55]/10 text-[#4A4A55]", "bg-[#F59E0B]/15 text-[#b07800]"];
-    let suma = 0;
-    for (let i = 0; i < id.length; i++) suma += id.charCodeAt(i);
-    return colors[suma % colors.length];
-  };
 
   const getEstadoClasses = (estado: string) => {
     switch (estado) {

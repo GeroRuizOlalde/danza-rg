@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 type Foto = {
   id: string;
@@ -79,7 +80,7 @@ export default function GestionGaleriaPage() {
       fetchFotos();
     } catch (error: any) {
       console.error("Error subiendo foto:", error.message);
-      alert("Hubo un error al subir la foto.");
+      toast.error("Hubo un error al subir la foto.");
     } finally {
       setSubiendo(false);
     }

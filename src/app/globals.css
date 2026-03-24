@@ -14,16 +14,10 @@
   --color-negro:      #1A1A22;
 }
 
-/* CSS vars para estilos inline (no-Tailwind) */
+/* CSS vars para clases CSS globales */
 :root {
-  --rosa:       #E8A0B4;
-  --rosa-d:     #C97A96;
-  --rosa-light: #F5D0DC;
-  --rosa-pale:  #FDF0F4;
-  --gris:       #4A4A55;
-  --gris-l:     #8A8A99;
-  --bg:         #F7F7F9;
-  --negro:      #1A1A22;
+  --rosa:   #E8A0B4;
+  --negro:  #1A1A22;
 }
 
 html { scroll-behavior: smooth; }
@@ -51,10 +45,7 @@ body {
   font-size: 0.72rem;
   font-weight: 500;
 }
-.nivel-inicio   { background: rgba(232,160,180,0.15); color: var(--rosa); }
-.nivel-medio    { background: rgba(201,122,150,0.20); color: #E8A0B4; }
-.nivel-avanzado { background: rgba(74,74,85,0.4);     color: rgba(255,255,255,0.8); }
-.nivel-todos    { background: rgba(245,208,220,0.1);  color: #F5D0DC; }
+.nivel-inicio { background: rgba(232,160,180,0.15); color: var(--rosa); }
 
 /* Horarios table */
 .horarios-table { width: 100%; border-collapse: collapse; }
@@ -73,15 +64,8 @@ body {
 .horarios-table tr:hover td { background: rgba(232,160,180,0.05); color: #fff; }
 
 /* Galería */
-.galeria-item { border-radius: 16px; overflow: hidden; position: relative; }
-.galeria-item img { width:100%; height:100%; object-fit:cover; transition: transform 0.4s, filter 0.4s; display:block; }
+.galeria-item img { transition: transform 0.4s, filter 0.4s; }
 .galeria-item:hover img { transform: scale(1.05); filter: brightness(0.85); }
-.galeria-overlay {
-  position:absolute; inset:0; background:rgba(201,122,150,0.4);
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; transition:opacity 0.3s;
-}
-.galeria-item:hover .galeria-overlay { opacity: 1; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(30px); }

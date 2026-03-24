@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 // ─── Tipos ────────────────────────────────────────────────────
 type Profesor = {
@@ -156,7 +157,7 @@ export default function ProfesoresPage() {
         if (data) setAsistencias(prev => [...prev, data]);
       }
     } catch (e: any) {
-      alert("Error: " + e.message);
+      toast.error("Error: " + e.message);
     } finally {
       setLoadingBtn(null);
     }
@@ -229,7 +230,7 @@ export default function ProfesoresPage() {
       await fetchProfesores();
       setModalOpen(false);
     } catch (e: any) {
-      alert("Error: " + e.message);
+      toast.error("Error: " + e.message);
     } finally {
       setGuardando(false);
     }

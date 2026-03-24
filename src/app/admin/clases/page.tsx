@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 type Clase = {
   id: string;
@@ -99,7 +100,7 @@ export default function ClasesPage() {
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error al guardar:", error);
-      alert("Hubo un error al guardar la clase.");
+      toast.error("Hubo un error al guardar la clase.");
     } finally {
       setIsSubmitting(false);
     }
@@ -115,7 +116,7 @@ export default function ClasesPage() {
       setClases(clases.filter(c => c.id !== id));
     } catch (error) {
       console.error("Error al eliminar:", error);
-      alert("Hubo un error al eliminar la clase.");
+      toast.error("Hubo un error al eliminar la clase.");
     }
   };
 

@@ -6,10 +6,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const navLinks = [
-  { href: '/#nosotros', label: 'Quiénes somos', onlyHome: true },
-  { href: '/clases',    label: 'Clases'          },
-  { href: '/#horarios', label: 'Horarios',      onlyHome: true },
-  { href: '/#galeria',  label: 'Galería',       onlyHome: true },
+  { href: '/#nosotros', label: 'Quiénes somos' },
+  { href: '/clases',    label: 'Clases' },
+  { href: '/#horarios', label: 'Horarios' },
+  { href: '/#galeria',  label: 'Galería' },
 ]
 
 export default function Navbar() {
@@ -17,23 +17,20 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [nombreAcademia, setNombreAcademia] = useState("R.G Danza")
-  
+
   const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
-    // 1. Efecto del scroll
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll)
-    
-    // 2. Buscar el nombre de la academia en Supabase
+
     async function fetchNombre() {
       const { data } = await supabase.from('academia_info').select('nombre').single()
       if (data?.nombre) setNombreAcademia(data.nombre)
     }
     fetchNombre()
 
-    // 3. Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -44,7 +41,6 @@ export default function Navbar() {
     }
   }, [])
 
-  // Bloqueo de scroll en mobile
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -59,92 +55,57 @@ export default function Navbar() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href.replace('/#', '/'))
 
-  const renderLogoDinámico = () => {
+  const renderLogo = () => {
     const partes = nombreAcademia.split(' ')
     if (partes.length === 1) return nombreAcademia
-    const primeraPalabra = partes[0]
-    const restoPalabras = partes.slice(1).join(' ')
     return (
       <>
-        {primeraPalabra} <span style={{ color: 'var(--rosa-d)' }}>{restoPalabras}</span>
+        {partes[0]} <span className="text-[#C97A96]">{partes.slice(1).join(' ')}</span>
       </>
     )
   }
 
   return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 5%', height: 72,
-      background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid rgba(232,160,180,0.2)',
-      boxShadow: scrolled ? '0 4px 24px rgba(201,122,150,0.12)' : 'none',
-      transition: 'box-shadow 0.3s',
-    }}>
+    <nav className={`fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-[5%] h-[72px] bg-white/92 backdrop-blur-xl border-b border-[#E8A0B4]/20 transition-shadow duration-300 ${scrolled ? 'shadow-[0_4px_24px_rgba(201,122,150,0.12)]' : ''}`}>
 
       {/* Logo */}
-      <Link href="/" style={{
-        fontFamily: "'Playfair Display', serif", fontSize: '1.5rem',
-        fontWeight: 700, color: 'var(--negro)', textDecoration: 'none',
-        letterSpacing: '-0.5px',
-      }}>
-        {renderLogoDinámico()}
+      <Link href="/" className="font-playfair text-2xl font-bold text-[#1A1A22] no-underline tracking-tight">
+        {renderLogo()}
       </Link>
 
       {/* Desktop Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }} className="nav-desktop">
-        <ul style={{ display: 'flex', gap: '1.5rem', listStyle: 'none', alignItems: 'center', margin: 0, padding: 0 }}>
+      <div className="hidden md:flex items-center gap-8">
+        <ul className="flex gap-6 list-none items-center m-0 p-0">
           {navLinks.map(({ href, label }) => (
             <li key={href}>
-              <Link href={href} style={{
-                textDecoration: 'none',
-                color: isActive(href) ? 'var(--rosa-d)' : 'var(--gris)',
-                fontSize: '0.875rem', fontWeight: 500,
-                transition: 'color 0.2s',
-              }}>
+              <Link
+                href={href}
+                className={`no-underline text-sm font-medium transition-colors duration-200 ${isActive(href) ? 'text-[#C97A96]' : 'text-[#4A4A55] hover:text-[#C97A96]'}`}
+              >
                 {label}
               </Link>
             </li>
           ))}
         </ul>
 
-        {/* BOTÓN RESERVAR TURNO (Vuelve a casa) */}
-        <Link href="/turnero" style={{
-          background: 'var(--rosa-d)', color: '#fff',
-          padding: '0.55rem 1.25rem', borderRadius: 100,
-          textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600,
-          transition: 'all 0.3s',
-          boxShadow: '0 4px 12px rgba(201,122,150,0.15)'
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        >
+        <Link href="/turnero" className="bg-[#C97A96] text-white px-5 py-2.5 rounded-full no-underline text-sm font-semibold transition-all shadow-[0_4px_12px_rgba(201,122,150,0.15)] hover:scale-105">
           Reservar turno
         </Link>
 
-        <div style={{ height: 24, width: 1, background: 'rgba(232,160,180,0.3)' }} />
+        <div className="h-6 w-px bg-[#E8A0B4]/30" />
 
-        {/* AUTH SECTION */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="flex items-center gap-4">
           {user ? (
             <>
-              <Link href="/perfil" style={{
-                textDecoration: 'none', color: 'var(--negro)', fontSize: '0.85rem', fontWeight: 600,
-                display: 'flex', alignItems: 'center', gap: '0.4rem'
-              }}>
+              <Link href="/perfil" className="no-underline text-[#1A1A22] text-sm font-semibold flex items-center gap-1.5 hover:text-[#C97A96] transition-colors">
                 👤 Mi Perfil
               </Link>
-              <button onClick={handleLogout} style={{
-                background: 'none', border: 'none', color: 'var(--gris)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500
-              }}>
+              <button onClick={handleLogout} className="bg-transparent border-none text-[#4A4A55] text-xs cursor-pointer font-medium hover:text-red-400 transition-colors">
                 Salir
               </button>
             </>
           ) : (
-            <Link href="/login" style={{
-              textDecoration: 'none', color: 'var(--gris)', fontSize: '0.85rem', fontWeight: 600,
-              padding: '0.5rem 0'
-            }}>
+            <Link href="/login" className="no-underline text-[#4A4A55] text-sm font-semibold py-2 hover:text-[#C97A96] transition-colors">
               Entrar
             </Link>
           )}
@@ -155,75 +116,47 @@ export default function Navbar() {
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         aria-label="Menú"
-        style={{
-          display: 'none', flexDirection: 'column', gap: 5,
-          cursor: 'pointer', background: 'none', border: 'none', padding: 4,
-        }}
-        className="nav-hamburger"
+        className="flex md:hidden flex-col gap-[5px] cursor-pointer bg-transparent border-none p-1"
       >
-        <span style={{ display: 'block', width: 24, height: 2, background: 'var(--negro)', transition: '0.3s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
-        <span style={{ display: 'block', width: 24, height: 2, background: 'var(--negro)', transition: '0.3s', opacity: menuOpen ? 0 : 1 }} />
-        <span style={{ display: 'block', width: 24, height: 2, background: 'var(--negro)', transition: '0.3s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+        <span className={`block w-6 h-0.5 bg-[#1A1A22] transition-transform duration-300 ${menuOpen ? 'rotate-45 translate-x-[5px] translate-y-[5px]' : ''}`} />
+        <span className={`block w-6 h-0.5 bg-[#1A1A22] transition-opacity duration-300 ${menuOpen ? 'opacity-0' : ''}`} />
+        <span className={`block w-6 h-0.5 bg-[#1A1A22] transition-transform duration-300 ${menuOpen ? '-rotate-45 translate-x-[5px] -translate-y-[5px]' : ''}`} />
       </button>
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div style={{
-          position: 'fixed', top: 72, left: 0, right: 0, bottom: 0,
-          background: '#fff', padding: '2rem',
-          display: 'flex', flexDirection: 'column', gap: '1.2rem',
-          zIndex: 99,
-        }}>
+        <div className="fixed top-[72px] left-0 right-0 bottom-0 bg-white p-8 flex flex-col gap-5 z-[99] md:hidden">
           {navLinks.map(({ href, label }) => (
-            <Link key={href} href={href} onClick={() => setMenuOpen(false)} style={{
-              color: isActive(href) ? 'var(--rosa-d)' : 'var(--negro)',
-              textDecoration: 'none', fontWeight: 600, fontSize: '1.1rem',
-              padding: '0.5rem 0', borderBottom: '1px solid #f5f5f5'
-            }}>
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              className={`no-underline font-semibold text-lg py-2 border-b border-gray-100 ${isActive(href) ? 'text-[#C97A96]' : 'text-[#1A1A22]'}`}
+            >
               {label}
             </Link>
           ))}
-          
-          <Link href="/turnero" onClick={() => setMenuOpen(false)} style={{
-            background: 'var(--rosa-d)', color: '#fff',
-            padding: '1rem', borderRadius: 100,
-            textDecoration: 'none', fontWeight: 700, fontSize: '1rem',
-            textAlign: 'center', marginTop: '1rem'
-          }}>
+
+          <Link href="/turnero" onClick={() => setMenuOpen(false)} className="bg-[#C97A96] text-white p-4 rounded-full no-underline font-bold text-center mt-4">
             Reservar turno
           </Link>
 
           {user ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-              <Link href="/perfil" onClick={() => setMenuOpen(false)} style={{
-                textDecoration: 'none', color: 'var(--negro)', fontWeight: 600, fontSize: '1rem', textAlign: 'center'
-              }}>
+            <div className="flex flex-col gap-4 mt-4">
+              <Link href="/perfil" onClick={() => setMenuOpen(false)} className="no-underline text-[#1A1A22] font-semibold text-center">
                 👤 Mi Perfil
               </Link>
-              <button onClick={handleLogout} style={{
-                background: '#f9f9f9', border: 'none', padding: '0.8rem', borderRadius: 12,
-                color: '#ff4d4d', fontWeight: 600, cursor: 'pointer'
-              }}>
+              <button onClick={handleLogout} className="bg-gray-100 border-none p-3 rounded-xl text-red-500 font-semibold cursor-pointer">
                 Cerrar Sesión
               </button>
             </div>
           ) : (
-            <Link href="/login" onClick={() => setMenuOpen(false)} style={{
-              textDecoration: 'none', color: 'var(--gris)', fontWeight: 600, fontSize: '1rem',
-              textAlign: 'center', marginTop: '0.5rem'
-            }}>
+            <Link href="/login" onClick={() => setMenuOpen(false)} className="no-underline text-[#4A4A55] font-semibold text-center mt-2">
               Iniciar Sesión
             </Link>
           )}
         </div>
       )}
-
-      <style>{`
-        @media (max-width: 768px) {
-          .nav-desktop { display: none !important; }
-          .nav-hamburger { display: flex !important; }
-        }
-      `}</style>
     </nav>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 // --- Tipos ---
 type Clase = { id: string; nombre: string };
@@ -104,7 +105,7 @@ export default function HorariosPage() {
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error guardando horario:", error);
-      alert("Error al guardar el horario.");
+      toast.error("Error al guardar el horario.");
     } finally {
       setGuardando(false);
     }

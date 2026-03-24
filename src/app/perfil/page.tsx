@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+import toast from "react-hot-toast";
 
 export default function PerfilPage() {
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function PerfilPage() {
     if (user) {
       const { error } = await supabase.from("perfiles").update(formData).eq("id", user.id);
       if (!error) {
-        alert("¡Perfil actualizado! ✨");
+        toast.success("¡Perfil actualizado!");
         setEditMode(false);
         fetchPerfil();
       }

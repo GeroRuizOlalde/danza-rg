@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function CompletarPerfil() {
   const [password, setPassword] = useState("");
@@ -36,13 +37,13 @@ export default function CompletarPerfil() {
 
         if (dbError) throw dbError;
 
-        alert("¡Cuenta configurada con éxito! Ya podés reservar.");
+        toast.success("¡Cuenta configurada con éxito! Ya podés reservar.");
         router.push("/turnero");
       } catch (error: any) {
-        alert("Error: " + error.message);
+        toast.error("Error: " + error.message);
       }
     } else {
-      alert("No se encontró una sesión activa. Por favor, usá el link que te llegó al mail.");
+      toast.error("No se encontró una sesión activa. Usá el link que te llegó al mail.");
     }
     setLoading(false);
   };

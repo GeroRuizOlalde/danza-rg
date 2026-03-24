@@ -30,9 +30,6 @@ export default function LoginPage() {
 
       // 3. Si llegamos acá, ¡hay sesión exitosa!
       if (data.session) {
-        // Soltamos la cookie para el middleware
-        document.cookie = "rg-admin-auth=true; path=/; max-age=86400";
-        // Forzamos la redirección
         window.location.href = "/admin/dashboard";
       } else {
         // Por si Supabase devuelve éxito pero sin sesión (pasa a veces con correos sin confirmar)

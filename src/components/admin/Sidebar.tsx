@@ -46,7 +46,6 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    document.cookie = "rg-admin-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.push("/admin/login");
   };
 

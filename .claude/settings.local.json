@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r style= C:Usersgeror.GEROOneDriveDocumentosGitHubdanza-rg/src/app --include=*.tsx --include=*.ts)",
+      "Bash(grep -r style= C:Usersgeror.GEROOneDriveDocumentosGitHubdanza-rg/src/components --include=*.tsx --include=*.ts)"
+    ]
+  }
+}

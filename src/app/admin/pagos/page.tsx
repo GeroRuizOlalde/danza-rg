@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
+import { mesActualStr } from "@/lib/utils";
 
 // ─── Tipos ────────────────────────────────────────────────────
 type Perfil = { id: string; nombre: string; apellido: string };
@@ -24,11 +26,6 @@ const MESES_NOMBRE = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
-
-function mesActualStr() {
-  const hoy = new Date();
-  return `${MESES_NOMBRE[hoy.getMonth()]} ${hoy.getFullYear()}`;
-}
 
 function getMetodoIcon(m: string) {
   if (m === "Efectivo") return "💵";
@@ -92,7 +89,7 @@ export default function PagosPage() {
       setIsModalOpen(false);
       setForm(formVacio);
     } else {
-      alert("Error al guardar: " + error.message);
+      toast.error("Error al guardar: " + error.message);
     }
     setGuardando(false);
   };

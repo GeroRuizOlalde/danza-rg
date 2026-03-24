@@ -5,108 +5,87 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function Footer() {
-  // Estado para guardar la información dinámica
   const [info, setInfo] = useState({
     nombre: 'R.G Danza',
     telefono: '351 679-3151',
     direccion: 'Río Negro 4450, Zona Sur · Cba.',
-    instagram: '@r.g_danza'
-  });
+    instagram: '@r.g_danza',
+  })
 
   useEffect(() => {
     async function fetchInfo() {
-      const { data } = await supabase.from('academia_info').select('*').single();
-      if (data) {
-        setInfo(data);
-      }
+      const { data } = await supabase.from('academia_info').select('*').single()
+      if (data) setInfo(data)
     }
-    fetchInfo();
-  }, []);
+    fetchInfo()
+  }, [])
 
-  // Limpiamos el teléfono y el instagram para armar los links reales
-  const numeroLimpio = info.telefono.replace(/\D/g, '');
-  const linkWhatsApp = `https://wa.me/${numeroLimpio}`;
-  const instagramLimpio = info.instagram.replace('@', '');
-  const linkInstagram = `https://www.instagram.com/${instagramLimpio}/`;
+  const numeroLimpio = info.telefono.replace(/\D/g, '')
+  const linkWhatsApp = `https://wa.me/${numeroLimpio}`
+  const instagramLimpio = info.instagram.replace('@', '')
+  const linkInstagram = `https://www.instagram.com/${instagramLimpio}/`
 
-  // Estructura dinámica de los links
   const footerLinks = {
     Páginas: [
       { href: '/#nosotros', label: 'Quiénes somos' },
-      { href: '/clases',    label: 'Clases'         },
-      { href: '/#horarios', label: 'Horarios'        },
-      { href: '/#galeria',  label: 'Galería'         },
-      { href: '/turnero',   label: 'Turnero'         },
+      { href: '/clases',    label: 'Clases' },
+      { href: '/#horarios', label: 'Horarios' },
+      { href: '/#galeria',  label: 'Galería' },
+      { href: '/turnero',   label: 'Turnero' },
     ],
     Disciplinas: [
-      { href: '/clases', label: 'Reggaetón'       },
-      { href: '/clases', label: 'Jazz'            },
-      { href: '/clases', label: 'Acro Tela'       },
-      { href: '/clases', label: 'Contemporáneo'   },
+      { href: '/clases', label: 'Reggaetón' },
+      { href: '/clases', label: 'Jazz' },
+      { href: '/clases', label: 'Acro Tela' },
+      { href: '/clases', label: 'Contemporáneo' },
       { href: '/clases', label: 'Danzas Clásicas' },
-      { href: '/clases', label: 'Ritmos Latinos'  },
+      { href: '/clases', label: 'Ritmos Latinos' },
     ],
     Contacto: [
       { href: `http://maps.google.com/?q=${encodeURIComponent(info.direccion)}`, label: `📍 ${info.direccion}` },
-      { href: `tel:+${numeroLimpio}`,                                            label: `📞 ${info.telefono}`  },
-      { href: linkInstagram,                                                     label: `📸 ${info.instagram}` },
-      { href: linkWhatsApp,                                                      label: '💬 WhatsApp'          },
+      { href: `tel:+${numeroLimpio}`,  label: `📞 ${info.telefono}` },
+      { href: linkInstagram,           label: `📸 ${info.instagram}` },
+      { href: linkWhatsApp,            label: '💬 WhatsApp' },
     ],
-  };
+  }
 
-  // Función para renderizar el logo dinámico con colores separados
-  const renderLogoDinámico = () => {
-    const partes = info.nombre.split(' ');
-    if (partes.length === 1) return info.nombre;
-    const primeraPalabra = partes[0];
-    const restoPalabras = partes.slice(1).join(' ');
+  const renderLogo = () => {
+    const partes = info.nombre.split(' ')
+    if (partes.length === 1) return info.nombre
     return (
       <>
-        {primeraPalabra} <span style={{ color: 'var(--rosa)' }}>{restoPalabras}</span>
+        {partes[0]} <span className="text-[#E8A0B4]">{partes.slice(1).join(' ')}</span>
       </>
-    );
-  };
+    )
+  }
 
   return (
-    <footer style={{ background: 'var(--negro)', color: '#fff', padding: '4rem 8% 2rem' }}>
-      
+    <footer className="bg-[#1A1A22] text-white pt-16 pb-8 px-[5%] md:px-[8%]">
+
       {/* Top grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr 1fr 1fr',
-        gap: '3rem',
-        paddingBottom: '3rem',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-      }}
-        className="footer-grid"
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-10 lg:gap-12 pb-12 border-b border-white/[0.08]">
+
         {/* Brand */}
         <div>
-          <Link href="/" style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: '1.4rem', fontWeight: 700,
-            color: '#fff', textDecoration: 'none',
-            display: 'inline-block', marginBottom: '1rem',
-          }}>
-            {renderLogoDinámico()}
+          <Link href="/" className="font-playfair text-xl font-bold text-white no-underline inline-block mb-4">
+            {renderLogo()}
           </Link>
-          <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, maxWidth: 280 }}>
+          <p className="text-sm text-white/45 leading-relaxed max-w-[280px]">
             Un espacio creado con amor para que cada alumna encuentre su ritmo, su expresión y su lugar en el mundo de la danza.
           </p>
-          {/* Socials */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <div className="flex gap-3 mt-6">
             {[
               { href: linkInstagram, label: '📸', title: 'Instagram' },
-              { href: linkWhatsApp,  label: '💬', title: 'WhatsApp'  },
+              { href: linkWhatsApp,  label: '💬', title: 'WhatsApp' },
             ].map(({ href, label, title }) => (
-              <a key={title} href={href} target="_blank" rel="noreferrer" title={title} style={{
-                width: 38, height: 38,
-                background: 'rgba(255,255,255,0.07)',
-                borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                textDecoration: 'none', fontSize: '0.9rem',
-                transition: 'background 0.2s',
-              }}>
+              <a
+                key={title}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                title={title}
+                className="w-[38px] h-[38px] bg-white/[0.07] rounded-full flex items-center justify-center no-underline text-sm hover:bg-white/15 transition-colors"
+              >
                 {label}
               </a>
             ))}
@@ -116,21 +95,17 @@ export default function Footer() {
         {/* Link columns */}
         {Object.entries(footerLinks).map(([title, links]) => (
           <div key={title}>
-            <h5 style={{
-              fontSize: '0.75rem', fontWeight: 600,
-              letterSpacing: '1.5px', textTransform: 'uppercase',
-              color: 'var(--rosa)', marginBottom: '1.25rem',
-            }}>
+            <h5 className="text-xs font-semibold tracking-[1.5px] uppercase text-[#E8A0B4] mb-5">
               {title}
             </h5>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', margin: 0, padding: 0 }}>
+            <ul className="list-none flex flex-col gap-2.5 m-0 p-0">
               {links.map(({ href, label }) => (
                 <li key={label}>
                   <Link
                     href={href}
                     target={href.startsWith('http') || href.startsWith('tel:') ? '_blank' : undefined}
-                    rel={(href.startsWith('http') || href.startsWith('tel:')) ? 'noreferrer' : undefined}
-                    style={{ textDecoration: 'none', fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s' }}
+                    rel={href.startsWith('http') || href.startsWith('tel:') ? 'noreferrer' : undefined}
+                    className="no-underline text-sm text-white/45 hover:text-white/80 transition-colors"
                   >
                     {label}
                   </Link>
@@ -142,24 +117,14 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '2rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>
+      <div className="flex flex-col sm:flex-row justify-between items-center pt-8 gap-2">
+        <p className="text-xs text-white/30">
           © {new Date().getFullYear()} {info.nombre}. Todos los derechos reservados.
         </p>
-        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)' }}>
+        <p className="text-xs text-white/20">
           Diseñado con 💗
         </p>
       </div>
-
-      {/* Responsive */}
-      <style>{`
-        @media (max-width: 900px) {
-          .footer-grid { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 540px) {
-          .footer-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </footer>
   )
 }
