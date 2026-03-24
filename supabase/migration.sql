@@ -85,7 +85,75 @@ BEGIN
   END IF;
 END $$;
 
--- 6. Intentar vincular reservas existentes con perfiles por teléfono
+-- 6. TABLA profesores
+CREATE TABLE IF NOT EXISTS profesores (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  apellido VARCHAR(100) NOT NULL DEFAULT '',
+  telefono VARCHAR(50),
+  disciplina VARCHAR(100) NOT NULL DEFAULT '',
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE profesores ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Lectura pública profesores" ON profesores;
+CREATE POLICY "Lectura pública profesores" ON profesores
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admin full access profesores" ON profesores;
+CREATE POLICY "Admin full access profesores" ON profesores
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM auth.users
+      WHERE auth.users.id = auth.uid()
+      AND (auth.users.raw_app_meta_data ->> 'role') = 'admin'
+    )
+  );
+
+-- 7. TABLA asistencia_profesores
+CREATE TABLE IF NOT EXISTS asistencia_profesores (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  profesor_id UUID NOT NULL REFERENCES profesores(id) ON DELETE CASCADE,
+  fecha DATE NOT NULL,
+  presente BOOLEAN NOT NULL DEFAULT false,
+  nota TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(profesor_id, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_asistencia_prof_fecha ON asistencia_profesores(fecha);
+CREATE INDEX IF NOT EXISTS idx_asistencia_prof_prof ON asistencia_profesores(profesor_id);
+
+ALTER TABLE asistencia_profesores ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Lectura pública asistencia_profesores" ON asistencia_profesores;
+CREATE POLICY "Lectura pública asistencia_profesores" ON asistencia_profesores
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admin full access asistencia_profesores" ON asistencia_profesores;
+CREATE POLICY "Admin full access asistencia_profesores" ON asistencia_profesores
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM auth.users
+      WHERE auth.users.id = auth.uid()
+      AND (auth.users.raw_app_meta_data ->> 'role') = 'admin'
+    )
+  );
+
+-- Si las tablas ya existían pero faltaba la columna "presente":
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asistencia_profesores' AND column_name = 'presente'
+  ) THEN
+    ALTER TABLE asistencia_profesores ADD COLUMN presente BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+END $$;
+
+-- 8. Intentar vincular reservas existentes con perfiles por teléfono
 UPDATE reservas r
 SET perfil_id = p.id
 FROM perfiles p
