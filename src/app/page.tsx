@@ -42,51 +42,45 @@ export default async function HomePage() {
       <FadeInObserver />
 
       {/* ── HERO ── */}
-      <section className="min-h-screen grid grid-cols-1 md:grid-cols-2 items-center pt-[72px] overflow-hidden relative">
-        {/* Glow decorativo */}
-        <div className="absolute -top-[200px] -right-[200px] w-[700px] h-[700px] bg-[radial-gradient(circle,rgba(232,160,180,0.18)_0%,transparent_70%)] pointer-events-none" />
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Imagen de fondo */}
+        <Image
+          src="https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=1400&q=80"
+          alt="Bailarina de danza en R.G Danza, academia en Córdoba"
+          fill
+          className="object-cover object-[center_top]"
+          priority
+        />
+        {/* Overlay oscuro */}
+        <div className="absolute inset-0 bg-[#1A1A22]/55" />
 
-        {/* SVG bailarina arabesque - esquina inferior izquierda */}
-        <svg className="absolute bottom-12 left-8 w-[280px] h-[280px] pointer-events-none hidden md:block" style={{ opacity: 0.05 }} viewBox="0 0 200 200" fill="#C97A96">
-          <path d="M95 25c-1 3-3 5-4 8-1 4 0 8-2 11-2 4-6 6-7 10-1 3 0 7 1 10 2 5 5 9 6 14 0 3-1 6-1 9 0 4 2 8 1 12-1 3-4 5-5 8-2 5-1 11 1 16 1 3 3 5 5 7 3 3 7 4 10 6 4 3 7 7 11 9 3 1 6 2 9 1 4-1 7-4 10-6 2-2 4-5 7-6 4-1 8 1 12 0 3-1 5-3 7-5 2-3 2-7 3-10 1-5 0-10 2-14 1-2 3-4 5-5 3-2 7-2 10-4 2-1 3-4 3-7 0-4-2-8-1-12 1-3 3-5 4-8 2-5 1-11-1-16-1-3-3-5-5-7-3-3-7-5-11-6-3-1-7-1-10 0-4 1-8 1-12 1-3 0-6-1-8-3-3-3-5-6-6-10-1-3-1-7 0-10z"/>
-        </svg>
-
-        <div className="p-8 md:p-[5%_5%_5%_8%] animate-[fadeUp_0.9s_ease_both]">
-          <div className="inline-flex items-center gap-2 bg-[#F5D0DC] text-[#C97A96] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase mb-6">
+        {/* Contenido centrado */}
+        <div className="relative z-10 text-center px-6 max-w-3xl animate-[fadeUp_0.9s_ease_both]">
+          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm text-white px-5 py-2 rounded-full text-xs font-medium tracking-[2px] uppercase mb-8 border border-white/20">
             ✦ Academia de Danza
           </div>
-          <h1 className="font-playfair text-[clamp(2.4rem,5vw,4.2rem)] font-bold leading-[1.1] text-[#1A1A22] mb-5">
+          <h1 className="font-playfair text-[clamp(2.6rem,6vw,4.8rem)] font-bold leading-[1.08] text-white mb-6">
             Donde el cuerpo<br />encuentra su{' '}
-            <em className="italic text-[#C97A96]">ritmo</em>
+            <em className="italic text-[#F5D0DC]">ritmo</em>
           </h1>
-          <p className="text-base text-[#8A8A99] leading-relaxed max-w-[460px] mb-10 font-light">
+          <p className="text-base md:text-lg text-white/75 leading-relaxed max-w-[540px] mx-auto mb-10 font-light">
             En {infoAcademia.nombre} te acompañamos en cada paso. Clases para todas las
             edades y niveles, en un espacio donde la pasión por el movimiento se convierte en arte.
           </p>
-          <div className="flex gap-4 flex-wrap">
-            <Link href="/turnero" className="inline-flex items-center gap-2 bg-[#C97A96] text-white px-8 py-3.5 rounded-full no-underline font-medium text-sm shadow-[0_4px_20px_rgba(201,122,150,0.35)] hover:bg-[#1A1A22] transition-colors">
+          <div className="flex gap-4 flex-wrap justify-center">
+            <Link href="/turnero" className="inline-flex items-center gap-2 bg-[#C97A96] text-white px-8 py-3.5 rounded-full no-underline font-medium text-sm shadow-[0_4px_20px_rgba(201,122,150,0.4)] hover:bg-white hover:text-[#1A1A22] transition-colors">
               ✦ Reservá tu clase de prueba
             </Link>
-            <a href="#nosotros" className="inline-flex items-center gap-2 border-[1.5px] border-[#F5D0DC] text-[#C97A96] px-8 py-3.5 rounded-full no-underline font-medium text-sm hover:bg-[#FDF0F4] transition-colors">
+            <a href="#nosotros" className="inline-flex items-center gap-2 border-[1.5px] border-white/30 text-white px-8 py-3.5 rounded-full no-underline font-medium text-sm hover:bg-white/10 transition-colors">
               Conocenos →
             </a>
           </div>
         </div>
 
-        <div className="relative h-[60vh] md:h-screen overflow-hidden">
-          <Image
-            src="https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=900&q=80"
-            alt="Bailarina de danza en R.G Danza, academia en Córdoba"
-            fill
-            className="object-cover object-[center_top]"
-            priority
-          />
-          <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-lg p-4 px-6 rounded-xl border border-[#E8A0B4]/30">
-            <p className="text-xs text-[#8A8A99]">Próximo inicio de ciclo</p>
-            <strong className="text-sm text-[#1A1A22] block">
-              Abril 2026 — Inscripciones abiertas
-            </strong>
-          </div>
+        {/* Card flotante inferior */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-lg px-6 py-3.5 rounded-full border border-[#E8A0B4]/30 shadow-lg z-10">
+          <span className="text-xs text-[#8A8A99]">Próximo inicio de ciclo · </span>
+          <strong className="text-sm text-[#1A1A22]">Abril 2026 — Inscripciones abiertas</strong>
         </div>
       </section>
 
