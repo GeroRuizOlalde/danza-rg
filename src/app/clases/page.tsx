@@ -19,10 +19,13 @@ export const revalidate = 60
 export default async function ClasesPage() {
   const supabase = createServerSupabase()
 
-  const [{ data: clasesData }, { data: horariosData }] = await Promise.all([
+  const [{ data: clasesData }, { data: horariosData }, { data: info }] = await Promise.all([
     supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null').order('nombre'),
     supabase.from('horarios').select('clase_id, dia, hora'),
+    supabase.from('academia_info').select('telefono').single(),
   ])
+
+  const telefonoLimpio = (info?.telefono ?? '3516793151').replace(/\D/g, '')
 
   const clases = (clasesData ?? []).map((clase: any) => {
     const susHorarios = (horariosData ?? [])
@@ -79,7 +82,7 @@ export default async function ClasesPage() {
             ✦ Reservar clase de prueba
           </Link>
           <Link
-            href="https://wa.me/543516793151"
+            href={`https://wa.me/${telefonoLimpio}`}
             target="_blank"
             className="inline-flex items-center justify-center gap-2 border-[1.5px] border-white/20 text-white/70 px-8 py-3.5 rounded-full font-medium text-sm transition-all hover:border-[#E8A0B4] hover:text-[#E8A0B4] hover:-translate-y-0.5"
           >

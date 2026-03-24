@@ -74,7 +74,7 @@ export default async function HomePage() {
             alt="Bailarina de danza en R.G Danza, academia en Córdoba"
             fill
             className="object-cover object-[center_top]"
-            priority unoptimized
+            priority
           />
           <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-lg p-4 px-6 rounded-xl border border-[#E8A0B4]/30">
             <p className="text-xs text-[#8A8A99]">Próximo inicio de ciclo</p>
@@ -91,7 +91,7 @@ export default async function HomePage() {
           <Image
             src="https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=700&q=80"
             alt="Profesora de danza en R.G Danza"
-            fill className="object-cover" unoptimized
+            fill className="object-cover"
           />
         </div>
         <div className="fade-in">
