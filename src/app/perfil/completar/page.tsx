@@ -17,26 +17,55 @@ export default function CompletarPerfil() {
   const router = useRouter();
 
   useEffect(() => {
-    // Escuchar cambios de auth — esto captura el token del hash fragment
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          // Pre-rellenar nombre/apellido si vienen en user_metadata
-          const meta = session.user.user_metadata;
-          if (meta?.display_name || meta?.last_name) {
-            setFormData(prev => ({
-              ...prev,
-              nombre: prev.nombre || meta.display_name || "",
-              apellido: prev.apellido || meta.last_name || "",
-            }));
+    const init = async () => {
+      // Si la URL tiene tokens en el hash, intercambiarlos manualmente
+      const hash = window.location.hash;
+      if (hash.includes("access_token")) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (data?.user) {
+            setUser(data.user);
+            const meta = data.user.user_metadata;
+            if (meta?.display_name || meta?.last_name) {
+              setFormData(prev => ({
+                ...prev,
+                nombre: prev.nombre || meta.display_name || "",
+                apellido: prev.apellido || meta.last_name || "",
+              }));
+            }
+            // Limpiar el hash de la URL
+            window.history.replaceState(null, "", window.location.pathname);
+            setChecking(false);
+            return;
           }
         }
-        setChecking(false);
       }
-    );
 
-    return () => subscription.unsubscribe();
+      // Sin hash: verificar si ya hay sesión existente
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        const meta = session.user.user_metadata;
+        if (meta?.display_name || meta?.last_name) {
+          setFormData(prev => ({
+            ...prev,
+            nombre: prev.nombre || meta.display_name || "",
+            apellido: prev.apellido || meta.last_name || "",
+          }));
+        }
+      }
+      setChecking(false);
+    };
+
+    init();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
