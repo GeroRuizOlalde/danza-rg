@@ -118,7 +118,6 @@ export default function TurneroPage() {
   const [step, setStep] = useState(1);
   const [mesOffset, setMesOffset] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [esParaOtro, setEsParaOtro] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
 
   const [clasesDB, setClasesDB] = useState<ClaseDB[]>([]);
@@ -515,21 +514,45 @@ export default function TurneroPage() {
               {/* ── PASO 3: DATOS ── */}
               {step === 3 && (
                 <div>
-                  <h2 className="font-playfair text-3xl font-semibold mb-2">Tus datos de contacto</h2>
+                  <h2 className="font-playfair text-3xl font-semibold mb-2">Datos de la alumna</h2>
                   <p className="text-[#8A8A99] text-sm mb-10 leading-relaxed">
-                    Necesitamos estos datos para enviarte la confirmación por WhatsApp.
+                    Completá los datos de quien va a tomar la clase y un contacto de WhatsApp.
+                  </p>
+
+                  {/* Datos de la alumna */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                    <input
+                      value={formData.alumnoNombre}
+                      onChange={e => updateForm('alumnoNombre', e.target.value)}
+                      placeholder="Nombre de la alumna *"
+                      className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
+                    />
+                    <input
+                      value={formData.alumnoEdad}
+                      onChange={e => updateForm('alumnoEdad', e.target.value)}
+                      placeholder="Edad *"
+                      type="number"
+                      min="2"
+                      max="99"
+                      className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
+                    />
+                  </div>
+
+                  {/* Datos de contacto (responsable) */}
+                  <p className="text-xs font-bold text-[#C97A96] uppercase tracking-widest mb-3">
+                    Datos de contacto
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                     <input
                       value={formData.nombre}
                       onChange={e => updateForm('nombre', e.target.value)}
-                      placeholder="Tu nombre *"
+                      placeholder="Nombre del responsable *"
                       className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
                     />
                     <input
                       value={formData.apellido}
                       onChange={e => updateForm('apellido', e.target.value)}
-                      placeholder="Tu apellido"
+                      placeholder="Apellido"
                       className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
                     />
                     <input
@@ -540,59 +563,13 @@ export default function TurneroPage() {
                     />
                   </div>
 
-                  {/* Toggle: ¿Para quién es la clase? */}
-                  <div className="bg-[#FDF0F4] rounded-2xl p-5 border border-[#E8A0B4]/20 mb-6">
-                    <p className="text-xs font-bold text-[#C97A96] uppercase tracking-widest mb-3">
-                      ¿La clase es para vos o para otra persona?
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => { setEsParaOtro(false); updateForm('alumnoNombre', ''); updateForm('alumnoEdad', ''); }}
-                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                          !esParaOtro ? 'bg-[#C97A96] text-white shadow-md' : 'bg-white text-[#4A4A55] border border-[#E8A0B4]/30 hover:border-[#C97A96]'
-                        }`}
-                      >
-                        Para mí
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEsParaOtro(true)}
-                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                          esParaOtro ? 'bg-[#C97A96] text-white shadow-md' : 'bg-white text-[#4A4A55] border border-[#E8A0B4]/30 hover:border-[#C97A96]'
-                        }`}
-                      >
-                        Para mi hijo/a
-                      </button>
-                    </div>
-                  </div>
-
-                  {esParaOtro && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                      <input
-                        value={formData.alumnoNombre}
-                        onChange={e => updateForm('alumnoNombre', e.target.value)}
-                        placeholder="Nombre del/la alumno/a *"
-                        className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
-                      />
-                      <input
-                        value={formData.alumnoEdad}
-                        onChange={e => updateForm('alumnoEdad', e.target.value)}
-                        placeholder="Edad del/la alumno/a *"
-                        type="number"
-                        min="2"
-                        max="99"
-                        className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
-                      />
-                    </div>
-                  )}
                   <div className="flex justify-between items-center">
                     <button onClick={handleBack} className="text-[#8A8A99] font-bold text-sm hover:text-[#1A1A22] transition-colors">
                       ← Volver
                     </button>
                     <button
                       onClick={handleNext}
-                      disabled={!formData.nombre || !formData.telefono || (esParaOtro && (!formData.alumnoNombre || !formData.alumnoEdad))}
+                      disabled={!formData.nombre || !formData.telefono || !formData.alumnoNombre || !formData.alumnoEdad}
                       className="bg-[#1A1A22] text-white px-12 py-4 rounded-full font-bold shadow-xl disabled:opacity-20 hover:bg-[#C97A96] transition-all"
                     >
                       Siguiente →

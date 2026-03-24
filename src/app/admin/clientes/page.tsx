@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { invitarAlumnaAction, eliminarAlumnaAction } from "./actions";
+import { invitarAlumnaAction, eliminarAlumnaAction, cambiarEmailAction } from "./actions";
 import toast from "react-hot-toast";
 import { mesActualStr, calcularEdad } from "@/lib/utils";
 
@@ -218,13 +218,26 @@ export default function ClientesPage() {
     if (!editForm.id) return;
     setGuardandoEdit(true);
 
+    // Si el email cambió, actualizar en auth vía server action
+    const alumnaOriginal = clientes.find(c => c.id === editForm.id);
+    const emailCambio = editForm.email && editForm.email !== (alumnaOriginal?.email || "");
+
+    if (emailCambio) {
+      const result = await cambiarEmailAction(editForm.id, editForm.email);
+      if (!result.success) {
+        toast.error("Error al cambiar email: " + result.error);
+        setGuardandoEdit(false);
+        return;
+      }
+    }
+
     const { error: errPerfil } = await supabase
       .from("perfiles")
       .update({
         nombre: editForm.nombre,
         apellido: editForm.apellido,
         telefono: editForm.telefono,
-        email: editForm.email || null,
+        ...(emailCambio ? {} : { email: editForm.email || null }),
         fecha_nacimiento: editForm.fecha_nacimiento || null,
         estado: editForm.estado,
       })
@@ -253,7 +266,7 @@ export default function ClientesPage() {
       }
     }
 
-    toast.success(`Datos de ${editForm.nombre} actualizados`);
+    toast.success(`Datos de ${editForm.nombre} actualizados` + (emailCambio ? ` (email actualizado a ${editForm.email})` : ""));
     setIsEditModalOpen(false);
     setGuardandoEdit(false);
     await fetchClientes();

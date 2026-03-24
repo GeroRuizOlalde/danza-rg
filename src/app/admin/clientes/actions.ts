@@ -70,3 +70,37 @@ export async function eliminarAlumnaAction(alumnaId: string) {
     return { success: false, error: error?.message || 'Error desconocido al eliminar alumna.' }
   }
 }
+
+export async function cambiarEmailAction(alumnaId: string, nuevoEmail: string) {
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { success: false, error: 'Faltan variables de entorno del servidor.' }
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+
+  try {
+    // Actualizar email en auth
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(alumnaId, {
+      email: nuevoEmail,
+      email_confirm: true,
+    })
+
+    if (authError) {
+      return { success: false, error: authError.message }
+    }
+
+    // Actualizar email en perfiles
+    const { error: dbError } = await supabaseAdmin
+      .from('perfiles')
+      .update({ email: nuevoEmail })
+      .eq('id', alumnaId)
+
+    if (dbError) {
+      return { success: false, error: dbError.message }
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error desconocido al cambiar email.' }
+  }
+}
