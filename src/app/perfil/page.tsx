@@ -216,9 +216,9 @@ export default function PerfilPage() {
               {reservas.map((r) => {
                 const estadoMap: Record<string, { label: string; cls: string }> = {
                   pendiente: { label: "Pendiente", cls: "bg-amber-50 text-amber-600 border-amber-100" },
-                  confirmada: { label: "Confirmada", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-                  cancelada: { label: "Cancelada", cls: "bg-red-50 text-red-500 border-red-100" },
-                  completada: { label: "Completada", cls: "bg-blue-50 text-blue-600 border-blue-100" },
+                  confirmado: { label: "Confirmada", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+                  cancelado: { label: "Cancelada", cls: "bg-red-50 text-red-500 border-red-100" },
+                  completado: { label: "Completada", cls: "bg-blue-50 text-blue-600 border-blue-100" },
                 };
                 const badge = estadoMap[r.estado] || estadoMap.pendiente;
                 const fechaStr = r.fecha

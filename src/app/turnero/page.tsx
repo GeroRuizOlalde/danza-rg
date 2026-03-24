@@ -265,6 +265,10 @@ export default function TurneroPage() {
       const fechaISO = formData.fecha
         ? new Date(formData.fecha.getTime() - (formData.fecha.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
         : null;
+
+      // Vincular con perfil si está logueado
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error } = await supabase.from('reservas').insert([{
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -277,6 +281,7 @@ export default function TurneroPage() {
         alumno_edad: formData.alumnoEdad ? parseInt(formData.alumnoEdad) : (formData.user_age || null),
         estado: 'pendiente',
         origen: 'turnero',
+        perfil_id: user?.id || null,
       }]);
       if (error) throw error;
       setStep(5);

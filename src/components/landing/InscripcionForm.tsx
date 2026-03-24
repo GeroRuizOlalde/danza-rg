@@ -27,6 +27,9 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
       .toISOString()
       .split('T')[0]
 
+    // Vincular con perfil si está logueado
+    const { data: { user } } = await supabase.auth.getUser()
+
     const { error: err } = await supabase.from('reservas').insert([{
       nombre,
       apellido,
@@ -36,6 +39,7 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
       horario: 'A coordinar',
       estado: 'pendiente',
       origen: 'landing',
+      perfil_id: user?.id || null,
     }])
 
     setEnviando(false)
