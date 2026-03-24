@@ -43,3 +43,30 @@ export async function invitarAlumnaAction(email: string, nombre: string, apellid
     return { success: false, error: error?.message || 'Error desconocido al invitar alumna.' }
   }
 }
+
+export async function eliminarAlumnaAction(alumnaId: string) {
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { success: false, error: 'Faltan variables de entorno del servidor.' }
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+
+  try {
+    // Borrar perfil (cascadea a alumna_clases)
+    const { error: dbError } = await supabaseAdmin
+      .from('perfiles')
+      .delete()
+      .eq('id', alumnaId)
+
+    if (dbError) {
+      return { success: false, error: dbError.message }
+    }
+
+    // Intentar borrar de auth (puede no existir si se creó manual)
+    await supabaseAdmin.auth.admin.deleteUser(alumnaId).catch(() => {})
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error desconocido al eliminar alumna.' }
+  }
+}
