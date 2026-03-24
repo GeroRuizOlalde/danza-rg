@@ -153,7 +153,21 @@ BEGIN
   END IF;
 END $$;
 
--- 8. Intentar vincular reservas existentes con perfiles por teléfono
+-- 8. COLUMNA origen en reservas (para distinguir landing vs turnero)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservas' AND column_name = 'origen'
+  ) THEN
+    ALTER TABLE reservas ADD COLUMN origen VARCHAR(20);
+    -- Backfill: las que tienen "A coordinar" probablemente vinieron de la landing
+    UPDATE reservas SET origen = 'landing' WHERE horario = 'A coordinar';
+    UPDATE reservas SET origen = 'turnero' WHERE horario != 'A coordinar' AND origen IS NULL;
+  END IF;
+END $$;
+
+-- 9. Intentar vincular reservas existentes con perfiles por teléfono
 UPDATE reservas r
 SET perfil_id = p.id
 FROM perfiles p

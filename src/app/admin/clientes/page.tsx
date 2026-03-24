@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { invitarAlumnaAction } from "./actions";
 import toast from "react-hot-toast";
@@ -26,9 +27,10 @@ const METODOS_PAGO = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
 
 
 export default function ClientesPage() {
+  const searchParams = useSearchParams();
   const [clientes, setClientes] = useState<Alumna[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [filtroActivo, setFiltroActivo] = useState("Todas");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -124,6 +126,25 @@ export default function ClientesPage() {
     e.preventDefault();
     if (!alumnaParaPago || !pagoForm.monto) return;
     setGuardandoPago(true);
+
+    // Validar pago duplicado
+    const { data: pagoExistente } = await supabase
+      .from("pagos")
+      .select("id")
+      .eq("alumna_id", alumnaParaPago.id)
+      .eq("mes_correspondiente", pagoForm.mes_correspondiente)
+      .maybeSingle();
+
+    if (pagoExistente) {
+      const confirmar = window.confirm(
+        `⚠️ ${alumnaParaPago.nombre} ya tiene un pago registrado para "${pagoForm.mes_correspondiente}".\n\n¿Querés registrar otro pago de todas formas?`
+      );
+      if (!confirmar) {
+        setGuardandoPago(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.from("pagos").insert([{
       alumna_id: alumnaParaPago.id,
       monto: parseFloat(pagoForm.monto),

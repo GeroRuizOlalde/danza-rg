@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -113,13 +114,16 @@ function claseAplicaParaEdad(nombreClase: string, edad: number): boolean {
 }
 
 export default function TurneroPage() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [mesOffset, setMesOffset] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [esParaOtro, setEsParaOtro] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
 
   const [clasesDB, setClasesDB] = useState<ClaseDB[]>([]);
   const [horariosDB, setHorariosDB] = useState<HorarioDB[]>([]);
+  const [telefonoAcademia, setTelefonoAcademia] = useState("");
 
   const [formData, setFormData] = useState<FormData>({
     disciplina: "", fecha: null, horario: "", nombre: "", apellido: "",
@@ -153,16 +157,33 @@ export default function TurneroPage() {
           }
         }
 
-        const [resClases, resHorarios] = await Promise.all([
+        const [resClases, resHorarios, resInfo] = await Promise.all([
           supabase.from('clases').select('*'),
-          supabase.from('horarios').select('*')
+          supabase.from('horarios').select('*'),
+          supabase.from('academia_info').select('telefono').single()
         ]);
 
-        if (resClases.data) {
-          setClasesDB(resClases.data.filter((c: ClaseDB) => c.estado === 'activa' || !c.estado));
+        if (resInfo.data?.telefono) {
+          setTelefonoAcademia(resInfo.data.telefono.replace(/\D/g, ''));
         }
+
+        const clasesActivas = resClases.data?.filter((c: ClaseDB) => c.estado === 'activa' || !c.estado) || [];
+        setClasesDB(clasesActivas);
+
         if (resHorarios.data) {
           setHorariosDB(resHorarios.data);
+        }
+
+        // Preseleccionar clase desde query param
+        const claseParam = searchParams.get('clase');
+        if (claseParam) {
+          const match = clasesActivas.find((c: ClaseDB) =>
+            c.nombre.toLowerCase() === claseParam.toLowerCase()
+          );
+          if (match) {
+            setFormData(prev => ({ ...prev, disciplina: match.nombre }));
+            setStep(2);
+          }
         }
 
       } catch (error) {
@@ -255,7 +276,8 @@ export default function TurneroPage() {
         horario: formData.horario,
         alumno_nombre: formData.alumnoNombre,
         alumno_edad: formData.alumnoEdad ? parseInt(formData.alumnoEdad) : (formData.user_age || null),
-        estado: 'pendiente'
+        estado: 'pendiente',
+        origen: 'turnero',
       }]);
       if (error) throw error;
       setStep(5);
@@ -318,16 +340,25 @@ export default function TurneroPage() {
             {/* STEPS INDICATOR */}
             {step < 5 && (
               <div className="flex gap-6 mb-12 overflow-x-auto pb-4 border-b border-gray-100">
-                {[1, 2, 3, 4].map(n => (
-                  <div key={`step-${n}`} className={`flex items-center gap-3 shrink-0 ${step === n ? 'text-[#C97A96]' : 'text-gray-300'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${step >= n ? 'bg-[#C97A96] text-white' : 'bg-gray-100 text-gray-400'}`}>
-                      {step > n ? '✓' : n}
-                    </div>
-                    <span className="text-[0.7rem] font-black uppercase tracking-widest">
-                      {n === 1 ? 'Disciplina' : n === 2 ? 'Horario' : n === 3 ? 'Tus Datos' : 'Confirmar'}
-                    </span>
-                  </div>
-                ))}
+                {[1, 2, 3, 4].map(n => {
+                  const canClick = n < step;
+                  return (
+                    <button
+                      key={`step-${n}`}
+                      type="button"
+                      disabled={!canClick}
+                      onClick={() => canClick && setStep(n)}
+                      className={`flex items-center gap-3 shrink-0 bg-transparent border-none p-0 ${canClick ? 'cursor-pointer' : 'cursor-default'} ${step === n ? 'text-[#C97A96]' : canClick ? 'text-[#C97A96]/60 hover:text-[#C97A96]' : 'text-gray-300'} transition-colors`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${step >= n ? 'bg-[#C97A96] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                        {step > n ? '✓' : n}
+                      </div>
+                      <span className="text-[0.7rem] font-black uppercase tracking-widest">
+                        {n === 1 ? 'Disciplina' : n === 2 ? 'Horario' : n === 3 ? 'Tus Datos' : 'Confirmar'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -488,45 +519,80 @@ export default function TurneroPage() {
                   <p className="text-[#8A8A99] text-sm mb-10 leading-relaxed">
                     Necesitamos estos datos para enviarte la confirmación por WhatsApp.
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                     <input
                       value={formData.nombre}
                       onChange={e => updateForm('nombre', e.target.value)}
-                      placeholder="Nombre"
+                      placeholder="Tu nombre *"
                       className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
                     />
                     <input
                       value={formData.apellido}
                       onChange={e => updateForm('apellido', e.target.value)}
-                      placeholder="Apellido"
+                      placeholder="Tu apellido"
                       className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
                     />
                     <input
                       value={formData.telefono}
                       onChange={e => updateForm('telefono', e.target.value)}
-                      placeholder="WhatsApp (Ej: 351...)"
+                      placeholder="WhatsApp (Ej: 351...) *"
                       className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all md:col-span-2"
                     />
-                    <input
-                      value={formData.alumnoNombre}
-                      onChange={e => updateForm('alumnoNombre', e.target.value)}
-                      placeholder="Nombre Alumna (Si no sos vos)"
-                      className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
-                    />
-                    <input
-                      value={formData.alumnoEdad}
-                      onChange={e => updateForm('alumnoEdad', e.target.value)}
-                      placeholder="Edad Alumna"
-                      className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
-                    />
                   </div>
+
+                  {/* Toggle: ¿Para quién es la clase? */}
+                  <div className="bg-[#FDF0F4] rounded-2xl p-5 border border-[#E8A0B4]/20 mb-6">
+                    <p className="text-xs font-bold text-[#C97A96] uppercase tracking-widest mb-3">
+                      ¿La clase es para vos o para otra persona?
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setEsParaOtro(false); updateForm('alumnoNombre', ''); updateForm('alumnoEdad', ''); }}
+                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
+                          !esParaOtro ? 'bg-[#C97A96] text-white shadow-md' : 'bg-white text-[#4A4A55] border border-[#E8A0B4]/30 hover:border-[#C97A96]'
+                        }`}
+                      >
+                        Para mí
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEsParaOtro(true)}
+                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
+                          esParaOtro ? 'bg-[#C97A96] text-white shadow-md' : 'bg-white text-[#4A4A55] border border-[#E8A0B4]/30 hover:border-[#C97A96]'
+                        }`}
+                      >
+                        Para mi hijo/a
+                      </button>
+                    </div>
+                  </div>
+
+                  {esParaOtro && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                      <input
+                        value={formData.alumnoNombre}
+                        onChange={e => updateForm('alumnoNombre', e.target.value)}
+                        placeholder="Nombre del/la alumno/a *"
+                        className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
+                      />
+                      <input
+                        value={formData.alumnoEdad}
+                        onChange={e => updateForm('alumnoEdad', e.target.value)}
+                        placeholder="Edad del/la alumno/a *"
+                        type="number"
+                        min="2"
+                        max="99"
+                        className="p-4 bg-white border border-gray-100 rounded-[1.2rem] outline-none focus:ring-2 focus:ring-[#C97A96]/20 focus:border-[#C97A96] transition-all"
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <button onClick={handleBack} className="text-[#8A8A99] font-bold text-sm hover:text-[#1A1A22] transition-colors">
                       ← Volver
                     </button>
                     <button
                       onClick={handleNext}
-                      disabled={!formData.nombre || !formData.telefono}
+                      disabled={!formData.nombre || !formData.telefono || (esParaOtro && (!formData.alumnoNombre || !formData.alumnoEdad))}
                       className="bg-[#1A1A22] text-white px-12 py-4 rounded-full font-bold shadow-xl disabled:opacity-20 hover:bg-[#C97A96] transition-all"
                     >
                       Siguiente →
@@ -577,20 +643,51 @@ export default function TurneroPage() {
               )}
 
               {/* ── PASO 5: ÉXITO ── */}
-              {step === 5 && (
-                <div className="text-center py-20">
-                  <div className="w-28 h-28 bg-gradient-to-br from-[#FDF0F4] to-[#E8A0B4] rounded-full flex items-center justify-center text-6xl mx-auto mb-10 shadow-2xl shadow-[#E8A0B4]/40">
-                    🎉
+              {step === 5 && (() => {
+                const fechaFormateada = formData.fecha?.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }) || '';
+                const mensajeWA = encodeURIComponent(
+                  `¡Hola! 👋 Acabo de reservar una clase de prueba de *${formData.disciplina}* para el *${fechaFormateada}* a las *${formData.horario} hs*.\n\nSoy ${formData.nombre} ${formData.apellido}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ''}` : ''}\n\n¡Gracias! 💗`
+                );
+                return (
+                  <div className="text-center py-20">
+                    <div className="w-28 h-28 bg-gradient-to-br from-[#FDF0F4] to-[#E8A0B4] rounded-full flex items-center justify-center text-6xl mx-auto mb-10 shadow-2xl shadow-[#E8A0B4]/40">
+                      🎉
+                    </div>
+                    <h2 className="font-playfair text-5xl font-bold mb-4 text-[#1A1A22]">¡Reserva Exitosa!</h2>
+                    <p className="text-[#8A8A99] text-base mb-3 max-w-md mx-auto font-light leading-relaxed">
+                      Tu lugar en <strong>R.G Danza</strong> está pre-reservado.
+                    </p>
+                    <p className="text-[#C97A96] text-sm font-medium mb-10 max-w-md mx-auto">
+                      Envianos un mensaje por WhatsApp para confirmar tu reserva y recibir toda la información.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                      {telefonoAcademia && (
+                        <a
+                          href={`https://wa.me/${telefonoAcademia}?text=${mensajeWA}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 bg-[#25D366] text-white px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-sm"
+                        >
+                          💬 Confirmar por WhatsApp
+                        </a>
+                      )}
+                      <Link href="/" className="inline-flex items-center gap-2 bg-[#1A1A22] text-white px-8 py-4 rounded-full font-bold shadow-lg hover:bg-[#C97A96] transition-all text-sm">
+                        Volver al inicio
+                      </Link>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-[#E8A0B4]/20 p-6 max-w-sm mx-auto shadow-sm">
+                      <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-3">Resumen de tu reserva</p>
+                      <div className="space-y-2 text-sm text-left">
+                        <div className="flex justify-between"><span className="text-[#8A8A99]">Disciplina</span><strong className="text-[#C97A96]">{formData.disciplina}</strong></div>
+                        <div className="flex justify-between"><span className="text-[#8A8A99]">Fecha</span><strong className="capitalize">{fechaFormateada}</strong></div>
+                        <div className="flex justify-between"><span className="text-[#8A8A99]">Horario</span><strong>{formData.horario} hs</strong></div>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="font-playfair text-5xl font-bold mb-6 text-[#1A1A22]">¡Reserva Exitosa!</h2>
-                  <p className="text-[#8A8A99] text-lg mb-12 max-w-md mx-auto font-light leading-relaxed">
-                    Tu lugar en <strong>R.G Danza</strong> está pre-reservado. En breve te contactaremos por WhatsApp para darte la bienvenida.
-                  </p>
-                  <Link href="/" className="bg-[#1A1A22] text-white px-14 py-4 rounded-full font-bold shadow-lg hover:bg-[#C97A96] transition-all uppercase tracking-widest text-sm">
-                    Volver al inicio
-                  </Link>
-                </div>
-              )}
+                );
+              })()}
 
             </div>
           </div>

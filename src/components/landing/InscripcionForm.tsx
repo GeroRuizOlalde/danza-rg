@@ -35,6 +35,7 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
       fecha: fechaISO,
       horario: 'A coordinar',
       estado: 'pendiente',
+      origen: 'landing',
     }])
 
     setEnviando(false)

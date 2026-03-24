@@ -110,7 +110,7 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
                     </div>
 
                     <Link
-                      href="/turnero"
+                      href={`/turnero?clase=${encodeURIComponent(clase.nombre)}`}
                       className="inline-flex items-center gap-2 bg-[#C97A96] text-white px-6 py-3 rounded-full text-sm font-medium w-fit transition-all shadow-[0_4px_16px_rgba(201,122,150,0.3)] hover:bg-[#1A1A22] hover:-translate-y-px"
                     >
                       Reservar clase de prueba →

@@ -14,6 +14,7 @@ type Reserva = {
   fecha: string;
   horario: string;
   estado: string;
+  origen?: string;
 };
 
 type Clase = { id: string; nombre: string };
@@ -230,7 +231,18 @@ export default function TurnosPage() {
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[0.7rem] font-semibold shrink-0 ${getAvatarColor(turno.id)}`}>
                             {getIniciales(turno.nombre, turno.apellido)}
                           </div>
-                          <span className="font-medium text-[#1A1A22] text-[0.85rem]">{turno.nombre} {turno.apellido}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-[#1A1A22] text-[0.85rem]">{turno.nombre} {turno.apellido}</span>
+                            {turno.origen === 'landing' && (
+                              <span className="text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100" title="Vino desde el formulario de la landing">Web</span>
+                            )}
+                            {turno.origen === 'turnero' && (
+                              <span className="text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded bg-[#FDF0F4] text-[#C97A96] border border-[#E8A0B4]/30" title="Reservó desde el turnero online">Turnero</span>
+                            )}
+                            {turno.horario === 'A coordinar' && !turno.origen && (
+                              <span className="text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100" title="Horario pendiente de coordinar">Coordinar</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
