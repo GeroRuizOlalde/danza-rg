@@ -13,7 +13,8 @@ type Horario = {
   dia: string;
   hora: number;
   nivel: string | null;
-  clases?: { nombre: string }; // Relación con la tabla clases
+  cupo_maximo: number;
+  clases?: { nombre: string };
 };
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
@@ -33,7 +34,7 @@ export default function HorariosPage() {
   const [celdaActual, setCeldaActual] = useState<{ dia: string; hora: number; horarioExistente?: Horario } | null>(null);
   
   // Datos del formulario
-  const [formData, setFormData] = useState({ clase_id: "", nivel: "" });
+  const [formData, setFormData] = useState({ clase_id: "", nivel: "", cupo_maximo: "20" });
 
   useEffect(() => {
     fetchData();
@@ -65,6 +66,7 @@ export default function HorariosPage() {
     setFormData({
       clase_id: horarioExistente?.clase_id || "",
       nivel: horarioExistente?.nivel || "",
+      cupo_maximo: String(horarioExistente?.cupo_maximo ?? 20),
     });
     setIsModalOpen(true);
   };
@@ -90,6 +92,7 @@ export default function HorariosPage() {
           dia: celdaActual.dia,
           hora: celdaActual.hora,
           nivel: formData.nivel,
+          cupo_maximo: parseInt(formData.cupo_maximo) || 20,
         };
 
         if (celdaActual.horarioExistente) {
@@ -188,7 +191,7 @@ export default function HorariosPage() {
                         >
                           {celda ? (
                             <>
-                              <strong className="text-[0.85rem] text-[#1A1A22] font-semibold leading-tight mb-1">
+                              <strong className="text-[0.85rem] text-[#1A1A22] font-semibold leading-tight mb-0.5">
                                 {celda.clases?.nombre || "Clase borrada"}
                               </strong>
                               {celda.nivel && (
@@ -196,6 +199,9 @@ export default function HorariosPage() {
                                   {celda.nivel}
                                 </span>
                               )}
+                              <span className="text-[0.6rem] text-[#8A8A99] mt-1">
+                                Cupo: {celda.cupo_maximo}
+                              </span>
                             </>
                           ) : (
                             <span className="text-gray-300 text-[1.2rem] font-light">+</span>
@@ -243,17 +249,30 @@ export default function HorariosPage() {
               </div>
 
               {formData.clase_id && (
-                <div className="mb-6">
-                  <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">Nivel / Edades (Opcional)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej: Baby, Infantil, Adultos..." 
-                    value={formData.nivel} 
-                    onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
-                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all" 
-                  />
-                  <p className="text-[0.65rem] text-[#8A8A99] mt-1">Se mostrará chiquito abajo del nombre de la clase.</p>
-                </div>
+                <>
+                  <div className="mb-4">
+                    <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">Nivel / Edades (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Baby, Infantil, Adultos..."
+                      value={formData.nivel}
+                      onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
+                      className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                    />
+                  </div>
+                  <div className="mb-6">
+                    <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">Cupo máximo</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={formData.cupo_maximo}
+                      onChange={(e) => setFormData({ ...formData, cupo_maximo: e.target.value })}
+                      className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                    />
+                    <p className="text-[0.65rem] text-[#8A8A99] mt-1">Cantidad de alumnas que pueden reservar este horario.</p>
+                  </div>
+                </>
               )}
 
               <div className="flex gap-2 pt-2">

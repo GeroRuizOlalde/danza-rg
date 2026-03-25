@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 
 // --- TIPOS ---
 type ClaseDB = { id: string; nombre: string; edades: string; estado: string };
-type HorarioDB = { id: string; clase_id: string; sala: number; dia: string; hora: number };
+type HorarioDB = { id: string; clase_id: string; sala: number; dia: string; hora: number; cupo_maximo: number };
 
 type FormData = {
   disciplina: string;
@@ -123,6 +123,7 @@ export default function TurneroPage() {
   const [clasesDB, setClasesDB] = useState<ClaseDB[]>([]);
   const [horariosDB, setHorariosDB] = useState<HorarioDB[]>([]);
   const [telefonoAcademia, setTelefonoAcademia] = useState("");
+  const [reservasPorHorario, setReservasPorHorario] = useState<Record<string, number>>({});
 
   const [formData, setFormData] = useState<FormData>({
     disciplina: "", fecha: null, horario: "", nombre: "", apellido: "",
@@ -173,6 +174,21 @@ export default function TurneroPage() {
           setHorariosDB(resHorarios.data);
         }
 
+        // Contar reservas activas por disciplina+horario para cupos
+        const { data: resReservas } = await supabase
+          .from('reservas')
+          .select('disciplina, horario')
+          .in('estado', ['pendiente', 'confirmado']);
+
+        if (resReservas) {
+          const conteo: Record<string, number> = {};
+          resReservas.forEach(r => {
+            const key = `${r.disciplina}|${r.horario}`;
+            conteo[key] = (conteo[key] || 0) + 1;
+          });
+          setReservasPorHorario(conteo);
+        }
+
         // Preseleccionar clase desde query param
         const claseParam = searchParams.get('clase');
         if (claseParam) {
@@ -204,8 +220,10 @@ export default function TurneroPage() {
     return { mes, anio, primerDia, diasMes };
   }, [fechaBase]);
 
+  type SlotHorario = { hora: string; cupo: number; reservados: number; lleno: boolean };
+
   const horariosDisponibles = useMemo(() => {
-    const mapa: Record<number, string[]> = {};
+    const mapa: Record<number, SlotHorario[]> = {};
     if (!formData.disciplina) return mapa;
     const claseSeleccionada = clasesDB.find(c => c.nombre === formData.disciplina);
     const filtrados = (formData.disciplina === 'No sé cuál elegir')
@@ -217,11 +235,15 @@ export default function TurneroPage() {
       if (numDia !== undefined) {
         if (!mapa[numDia]) mapa[numDia] = [];
         const horaStr = `${h.hora}:00`;
-        if (!mapa[numDia].includes(horaStr)) mapa[numDia].push(horaStr);
+        if (mapa[numDia].some(s => s.hora === horaStr)) return;
+        const key = `${formData.disciplina}|${horaStr}`;
+        const reservados = reservasPorHorario[key] || 0;
+        const cupo = h.cupo_maximo || 20;
+        mapa[numDia].push({ hora: horaStr, cupo, reservados, lleno: reservados >= cupo });
       }
     });
     return mapa;
-  }, [formData.disciplina, clasesDB, horariosDB]);
+  }, [formData.disciplina, clasesDB, horariosDB, reservasPorHorario]);
 
   const disciplinasFiltradas = useMemo(() => {
     const procesadas = clasesDB.map(c => {
@@ -459,7 +481,8 @@ export default function TurneroPage() {
                         const d = i + 1;
                         const f = new Date(calendarioInfo.anio, calendarioInfo.mes, d);
                         const esPasado = f < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-                        const slots = horariosDisponibles[f.getDay()];
+                        const slotsDelDia = horariosDisponibles[f.getDay()];
+                        const slots = slotsDelDia?.some(s => !s.lleno) ? slotsDelDia : undefined;
                         const isSelected = formData.fecha?.toDateString() === f.toDateString();
                         return (
                           <button
@@ -484,18 +507,35 @@ export default function TurneroPage() {
                         <p className="text-[0.65rem] font-black text-[#C97A96] uppercase mb-4 tracking-[2px]">
                           Horarios para el {formData.fecha.getDate()} de {MESES[formData.fecha.getMonth()]}
                         </p>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                          {horariosDisponibles[formData.fecha.getDay()]?.map((h, idx) => (
-                            <button
-                              key={`time-${idx}`}
-                              onClick={() => updateForm('horario', h)}
-                              className={`py-3 rounded-2xl border-2 font-bold text-sm transition-all ${
-                                formData.horario === h
-                                  ? 'border-[#C97A96] bg-[#C97A96] text-white shadow-md'
-                                  : 'border-gray-100 hover:border-[#C97A96] text-gray-600'
-                              }`}
-                            >{h}</button>
-                          ))}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {horariosDisponibles[formData.fecha.getDay()]?.map((slot, idx) => {
+                            const lugares = slot.cupo - slot.reservados;
+                            return (
+                              <button
+                                key={`time-${idx}`}
+                                onClick={() => !slot.lleno && updateForm('horario', slot.hora)}
+                                disabled={slot.lleno}
+                                className={`py-3 px-2 rounded-2xl border-2 font-bold text-sm transition-all ${
+                                  slot.lleno
+                                    ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                    : formData.horario === slot.hora
+                                      ? 'border-[#C97A96] bg-[#C97A96] text-white shadow-md'
+                                      : 'border-gray-100 hover:border-[#C97A96] text-gray-600'
+                                }`}
+                              >
+                                <span className="block">{slot.hora}</span>
+                                <span className={`block text-[0.65rem] font-medium mt-0.5 ${
+                                  slot.lleno
+                                    ? 'text-red-300'
+                                    : formData.horario === slot.hora
+                                      ? 'text-white/70'
+                                      : lugares <= 3 ? 'text-amber-500' : 'text-[#8A8A99]'
+                                }`}>
+                                  {slot.lleno ? 'Sin cupo' : `${lugares} ${lugares === 1 ? 'lugar' : 'lugares'}`}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
