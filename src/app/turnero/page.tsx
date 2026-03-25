@@ -643,8 +643,12 @@ export default function TurneroPage() {
                         <span className="text-[#8A8A99] text-sm">Horario</span>
                         <strong className="text-[#1A1A22]">{formData.horario} hs</strong>
                       </div>
+                      <div className="flex justify-between border-b border-gray-50 pb-5 items-center">
+                        <span className="text-[#8A8A99] text-sm">Alumna</span>
+                        <strong className="text-[#1A1A22]">{formData.alumnoNombre}{formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ''}</strong>
+                      </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#8A8A99] text-sm">Alumno/a</span>
+                        <span className="text-[#8A8A99] text-sm">Contacto</span>
                         <strong className="text-[#1A1A22]">{formData.nombre} {formData.apellido}</strong>
                       </div>
                     </div>

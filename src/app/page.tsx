@@ -198,10 +198,12 @@ export default async function HomePage() {
               key={img.id}
               className="galeria-item relative aspect-square rounded-2xl overflow-hidden"
             >
-              <img
+              <Image
                 src={img.url}
-                alt="Galería R.G Danza"
-                className="w-full h-full object-cover"
+                alt={img.categoria ? `${img.categoria} — R.G Danza` : "Galería R.G Danza"}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               />
             </div>
           ))}

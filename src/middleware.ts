@@ -40,8 +40,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-  const isAdminLogin = request.nextUrl.pathname === '/admin/login'
+  const pathname = request.nextUrl.pathname
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminLogin = pathname === '/admin/login'
+  const isPerfilRoute = pathname.startsWith('/perfil')
 
   // Allow /admin/login always
   if (isAdminLogin) return response
@@ -56,6 +58,13 @@ export async function middleware(request: NextRequest) {
     const role = user.app_metadata?.role || user.user_metadata?.role
     if (role !== 'admin') {
       return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
+
+  // Protect /perfil routes — require logged-in user
+  if (isPerfilRoute && !pathname.startsWith('/perfil/completar')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?redirect=/perfil', request.url))
     }
   }
 
