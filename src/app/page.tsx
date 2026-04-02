@@ -10,26 +10,60 @@ import FadeInObserver from '@/components/landing/FadeInObserver'
 import ClaseCard from '@/components/landing/ClaseCard'
 import { createServerSupabase } from '@/lib/supabase-server'
 
+type AcademiaInfo = {
+  nombre: string
+  telefono: string
+  direccion: string
+  instagram: string
+}
+
+type ClaseRecord = Record<string, unknown> & {
+  id: string
+  nombre: string
+}
+
+type GaleriaRecord = Record<string, unknown> & {
+  id: string
+  url: string
+  categoria?: string | null
+}
+
+type HorarioRecord = {
+  hora: number
+  dia: string
+  sala: number
+  nivel: string | null
+  clases?: { nombre: string } | null
+}
+
 export default async function HomePage() {
   const supabase = createServerSupabase()
 
-  const [
-    { data: info },
-    { data: clases },
-    { data: horarios },
-    { data: galeria },
-  ] = await Promise.all([
-    supabase.from('academia_info').select('*').single(),
-    supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null'),
-    supabase.from('horarios').select('*, clases(nombre)'),
-    supabase.from('galeria').select('*').order('orden', { ascending: true }),
-  ])
+  let info: Partial<AcademiaInfo> | null = null
+  let clases: ClaseRecord[] | null = null
+  let horarios: HorarioRecord[] | null = null
+  let galeria: GaleriaRecord[] | null = null
 
-  const infoAcademia = info ?? {
+  if (supabase) {
+    ;[
+      { data: info },
+      { data: clases },
+      { data: horarios },
+      { data: galeria },
+    ] = await Promise.all([
+      supabase.from('academia_info').select('*').single(),
+      supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null'),
+      supabase.from('horarios').select('*, clases(nombre)'),
+      supabase.from('galeria').select('*').order('orden', { ascending: true }),
+    ])
+  }
+
+  const infoAcademia: AcademiaInfo = {
     nombre: 'R.G Danza',
     telefono: '351 679-3151',
     direccion: 'Río Negro 4450, Zona Sur · Córdoba, Arg.',
     instagram: '@r.g_danza',
+    ...info,
   }
 
   const clasesDB = clases ?? []
@@ -138,7 +172,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clasesDB.slice(0, 3).map((clase: any) => (
+          {clasesDB.slice(0, 3).map((clase) => (
             <ClaseCard key={clase.id} clase={clase} />
           ))}
         </div>
@@ -183,7 +217,7 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="fade-in bg-white rounded-3xl p-8 md:p-10 shadow-[0_16px_48px_rgba(201,122,150,0.12)]">
-          <InscripcionForm telefonoDinamico={infoAcademia.telefono} clases={clasesDB.map((c: any) => ({ id: c.id, nombre: c.nombre }))} />
+          <InscripcionForm telefonoDinamico={infoAcademia.telefono} clases={clasesDB.map((c) => ({ id: c.id, nombre: c.nombre }))} />
         </div>
       </section>
 
@@ -193,7 +227,7 @@ export default async function HomePage() {
           Momentos que <em className="italic text-[#C97A96]">brillan</em>
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {galeriaDB.map((img: any) => (
+          {galeriaDB.map((img) => (
             <div
               key={img.id}
               className="galeria-item relative aspect-square rounded-2xl overflow-hidden"

@@ -16,29 +16,54 @@ export const metadata: Metadata = {
 
 export const revalidate = 60
 
+type ClaseRecord = {
+  id: string
+  nombre: string
+  etiqueta?: string | null
+  edades?: string | null
+  descripcion?: string | null
+  imagen_url?: string | null
+}
+
+type HorarioRecord = {
+  clase_id: string
+  dia: string
+  hora: string
+}
+
+type AcademiaInfo = {
+  telefono: string
+}
+
 export default async function ClasesPage() {
   const supabase = createServerSupabase()
 
-  const [{ data: clasesData }, { data: horariosData }, { data: info }] = await Promise.all([
-    supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null').order('nombre'),
-    supabase.from('horarios').select('clase_id, dia, hora'),
-    supabase.from('academia_info').select('telefono').single(),
-  ])
+  let clasesData: ClaseRecord[] | null = null
+  let horariosData: HorarioRecord[] | null = null
+  let info: AcademiaInfo | null = null
+
+  if (supabase) {
+    ;[{ data: clasesData }, { data: horariosData }, { data: info }] = await Promise.all([
+      supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null').order('nombre'),
+      supabase.from('horarios').select('clase_id, dia, hora'),
+      supabase.from('academia_info').select('telefono').single(),
+    ])
+  }
 
   const telefonoLimpio = (info?.telefono ?? '3516793151').replace(/\D/g, '')
 
-  const clases = (clasesData ?? []).map((clase: any) => {
+  const clases = (clasesData ?? []).map((clase) => {
     const susHorarios = (horariosData ?? [])
-      .filter((h: any) => h.clase_id === clase.id)
-      .map((h: any) => `${h.dia} ${h.hora}:00`)
+      .filter((h) => h.clase_id === clase.id)
+      .map((h) => `${h.dia} ${h.hora}:00`)
 
     return {
       id: clase.id,
       nombre: clase.nombre,
-      etiqueta: clase.etiqueta,
-      edades: clase.edades,
-      descripcion: clase.descripcion,
-      imagen_url: clase.imagen_url,
+      etiqueta: clase.etiqueta ?? 'General',
+      edades: clase.edades ?? 'Todas las edades',
+      descripcion: clase.descripcion ?? '',
+      imagen_url: clase.imagen_url ?? '',
       horariosFormateados: susHorarios,
     }
   })

@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabasePublicEnv } from './supabase-env'
 
 export function createServerSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const { url, anonKey, isConfigured } = getSupabasePublicEnv()
+
+  if (!isConfigured) return null
+
+  return createClient(url!, anonKey!)
 }
