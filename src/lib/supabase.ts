@@ -116,6 +116,10 @@ function createMockBrowserClient(): BrowserSupabaseClient {
         warnMissingSupabaseEnv()
         return { data: { user: null, session: null }, error: authError }
       },
+      async signUp() {
+        warnMissingSupabaseEnv()
+        return { data: { user: null, session: null }, error: authError }
+      },
       async setSession() {
         warnMissingSupabaseEnv()
         return { data: { session: null, user: null }, error: authError }

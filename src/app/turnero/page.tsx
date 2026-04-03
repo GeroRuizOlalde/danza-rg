@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { crearReservaTurneroAction } from "@/app/actions/reservas";
 import Navbar from "@/components/Navbar";
@@ -35,6 +35,7 @@ type FormState = {
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS = ["D","L","M","X","J","V","S"];
+const REGISTRO_PREFILL_KEY = "turnero-registro-prefill";
 const DIA_A_NUMERO: Record<string, number> = {
   Domingo: 0,
   Lunes: 1,
@@ -110,11 +111,13 @@ function iconoClase(nombre: string) {
 }
 
 export default function TurneroPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [mesOffset, setMesOffset] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [clases, setClases] = useState<ClaseDB[]>([]);
   const [horarios, setHorarios] = useState<HorarioDB[]>([]);
   const [telefonoAcademia, setTelefonoAcademia] = useState("");
@@ -147,6 +150,7 @@ export default function TurneroPage() {
         ]);
 
         if (auth.user) {
+          setIsAuthenticated(true);
           const { data: perfil } = await supabase.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
           if (perfil) {
             setFormData((prev) => ({
@@ -291,6 +295,19 @@ export default function TurneroPage() {
       ? `¡Hola! 👋 Quiero coordinar una clase de prueba y necesito orientación.\n\nSoy ${formData.nombre} ${formData.apellido}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\n¡Gracias!`
       : `¡Hola! 👋 Acabo de reservar una clase de prueba de ${formData.disciplina} para el ${fechaFormateada} a las ${formData.horario} hs.\n\nSoy ${formData.nombre} ${formData.apellido}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\n¡Gracias!`
   );
+
+  const handleCrearCuenta = () => {
+    window.sessionStorage.setItem(
+      REGISTRO_PREFILL_KEY,
+      JSON.stringify({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        telefono: formData.telefono,
+        email: formData.email,
+      })
+    );
+    router.push("/registro");
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-[#8A8A99]">Cargando el turnero...</div>;
@@ -471,6 +488,7 @@ export default function TurneroPage() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
                   {telefonoAcademia && <a href={`https://wa.me/${telefonoAcademia}?text=${mensajeWA}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366] text-white px-8 py-4 rounded-full font-bold">Confirmar por WhatsApp</a>}
                   <Link href="/" className="bg-[#1A1A22] text-white px-8 py-4 rounded-full font-bold">Volver al inicio</Link>
+                  {isAuthenticated && <Link href="/perfil" className="bg-white text-[#1A1A22] px-8 py-4 rounded-full font-bold border border-gray-200">Ir a mi perfil</Link>}
                 </div>
                 <div className="bg-white rounded-2xl border border-[#E8A0B4]/20 p-6 max-w-sm mx-auto shadow-sm text-left">
                   <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-3">Resumen</p>
@@ -481,6 +499,26 @@ export default function TurneroPage() {
                     {esAsesoramiento && <div className="flex justify-between"><span className="text-[#8A8A99]">Seguimiento</span><strong>Coordinación por WhatsApp</strong></div>}
                   </div>
                 </div>
+                {!isAuthenticated && (
+                  <div className="max-w-xl mx-auto mt-8 bg-white rounded-[2rem] border border-[#E8A0B4]/20 p-6 md:p-8 shadow-sm text-left">
+                    <p className="text-[0.7rem] font-bold uppercase tracking-[2px] text-[#C97A96] mb-3">
+                      Optimizá tu próxima reserva
+                    </p>
+                    <h3 className="font-playfair text-2xl font-semibold text-[#1A1A22] mb-3">
+                      Creá tu cuenta y vinculá este turno
+                    </h3>
+                    <p className="text-sm text-[#8A8A99] leading-relaxed mb-5">
+                      Así la próxima vez completás tus datos más rápido y este turno queda guardado en tu perfil para seguir todo desde un solo lugar.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCrearCuenta}
+                      className="bg-[#C97A96] text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-[#1A1A22] transition-colors"
+                    >
+                      Crear cuenta y vincular mi turno
+                    </button>
+                  </div>
+                )}
               </section>
             )}
           </main>

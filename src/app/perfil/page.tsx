@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { finalizarCuentaClienteAction } from "@/app/actions/cuenta";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 
@@ -56,6 +57,11 @@ export default function PerfilPage() {
     if (!user) {
       setLoading(false);
       return;
+    }
+
+    const syncResult = await finalizarCuentaClienteAction();
+    if (!syncResult.success) {
+      console.warn("No se pudieron sincronizar las reservas del perfil:", syncResult.error);
     }
 
     const { data: perfilData } = await supabase.from("perfiles").select("*").eq("id", user.id).single();

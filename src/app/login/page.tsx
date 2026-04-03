@@ -65,10 +65,17 @@ function LoginForm() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-            <p className="text-[#8A8A99] text-xs">¿Todavía no tenés cuenta? La academia te envía una invitación por email.</p>
-            <Link href="/turnero" className="inline-block mt-3 text-[#C97A96] text-sm font-semibold hover:underline">
-              Reservar clase de prueba sin cuenta →
-            </Link>
+            <p className="text-[#8A8A99] text-xs">
+              ¿Ya reservaste una clase? Podés crear tu cuenta para optimizar tiempo la próxima vez y vincular tu turno.
+            </p>
+            <div className="mt-3 flex flex-col gap-3">
+              <Link href="/registro" className="inline-block text-[#C97A96] text-sm font-semibold hover:underline">
+                Crear cuenta y vincular turno →
+              </Link>
+              <Link href="/turnero" className="inline-block text-[#8A8A99] text-sm hover:underline">
+                Reservar clase de prueba sin cuenta
+              </Link>
+            </div>
           </div>
         </div>
       </div>
