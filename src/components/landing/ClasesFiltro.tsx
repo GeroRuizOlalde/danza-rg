@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 type ClaseProcesada = {
@@ -13,26 +14,52 @@ type ClaseProcesada = {
   horariosFormateados: string[]
 }
 
+const FALLBACK = 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&q=80'
+
 const FILTROS = [
   { id: 'all', label: 'Todas' },
-  { id: 'Clásico', label: 'Clásico' },
+  { id: 'Clasico', label: 'Clasico' },
   { id: 'Jazz', label: 'Jazz' },
   { id: 'Urbano', label: 'Urbano' },
   { id: 'Acrobacia', label: 'Acrobacia' },
 ]
 
+function normalizarTexto(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function ClaseImagen({ src, alt }: { src: string; alt: string }) {
+  const [imageSrc, setImageSrc] = useState(src || FALLBACK)
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={alt}
+      fill
+      unoptimized
+      sizes="(max-width: 768px) 100vw, 380px"
+      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      onError={() => setImageSrc(FALLBACK)}
+    />
+  )
+}
+
 export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
   const [filtroActivo, setFiltroActivo] = useState('all')
 
   const clasesFiltradas = useMemo(() => {
-    return clases.filter(
-      (clase) => filtroActivo === 'all' || clase.etiqueta === filtroActivo
-    )
+    return clases.filter((clase) => {
+      if (filtroActivo === 'all') return true
+      return normalizarTexto(clase.etiqueta) === normalizarTexto(filtroActivo)
+    })
   }, [clases, filtroActivo])
 
   return (
     <>
-      {/* FILTROS */}
       <div className="py-10 px-[5%] md:px-[8%] bg-white border-b border-[#E8A0B4]/15">
         <div className="max-w-7xl mx-auto flex gap-3 flex-wrap">
           {FILTROS.map((filtro) => (
@@ -51,12 +78,12 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
         </div>
       </div>
 
-      {/* LISTA DE CLASES */}
       <section className="py-16 px-[5%] md:px-[8%] max-w-7xl mx-auto min-h-[50vh]">
         <div className="flex flex-col gap-10">
           {clasesFiltradas.length > 0 ? (
             clasesFiltradas.map((clase, index) => {
               const isReverse = index % 2 !== 0
+
               return (
                 <div
                   key={clase.id}
@@ -64,12 +91,12 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
                     isReverse ? 'md:grid-cols-[1fr_380px]' : ''
                   }`}
                 >
-                  <div className={`relative min-h-[240px] md:min-h-[320px] overflow-hidden group ${isReverse ? 'md:order-2' : ''}`}>
-                    <img
-                      src={clase.imagen_url || 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&q=80'}
-                      alt={clase.nombre}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                  <div
+                    className={`relative min-h-[240px] md:min-h-[320px] overflow-hidden group ${
+                      isReverse ? 'md:order-2' : ''
+                    }`}
+                  >
+                    <ClaseImagen src={clase.imagen_url} alt={clase.nombre} />
                   </div>
 
                   <div className={`p-8 md:p-10 flex flex-col justify-center ${isReverse ? 'md:order-1' : ''}`}>
@@ -85,10 +112,10 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-7">
                       <div className="flex items-center gap-2 text-sm text-[#4A4A55]">
-                        🎀 Edad/Nivel: <strong className="text-[#1A1A22]">{clase.edades}</strong>
+                        Edad/Nivel: <strong className="text-[#1A1A22]">{clase.edades}</strong>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-[#4A4A55]">
-                        ⏱️ Duración: <strong className="text-[#1A1A22]">60 — 90 min</strong>
+                        Duracion: <strong className="text-[#1A1A22]">60 - 90 min</strong>
                       </div>
                     </div>
 
@@ -98,13 +125,16 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {clase.horariosFormateados.length > 0 ? (
-                          clase.horariosFormateados.map(horario => (
-                            <span key={horario} className="inline-block bg-[#F7F7F9] text-[#4A4A55] text-xs px-3 py-1.5 rounded-lg font-medium">
+                          clase.horariosFormateados.map((horario) => (
+                            <span
+                              key={horario}
+                              className="inline-block bg-[#F7F7F9] text-[#4A4A55] text-xs px-3 py-1.5 rounded-lg font-medium"
+                            >
                               {horario}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-[#8A8A99]">Próximamente...</span>
+                          <span className="text-xs text-[#8A8A99]">Proximamente...</span>
                         )}
                       </div>
                     </div>
@@ -113,7 +143,7 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
                       href={`/turnero?clase=${encodeURIComponent(clase.nombre)}`}
                       className="inline-flex items-center gap-2 bg-[#C97A96] text-white px-6 py-3 rounded-full text-sm font-medium w-fit transition-all shadow-[0_4px_16px_rgba(201,122,150,0.3)] hover:bg-[#1A1A22] hover:-translate-y-px"
                     >
-                      Reservar clase de prueba →
+                      Reservar clase de prueba
                     </Link>
                   </div>
                 </div>
@@ -121,7 +151,7 @@ export default function ClasesFiltro({ clases }: { clases: ClaseProcesada[] }) {
             })
           ) : (
             <div className="text-center py-20 text-[#8A8A99]">
-              No hay clases disponibles para esta categoría actualmente.
+              No hay clases disponibles para esta categoria actualmente.
             </div>
           )}
         </div>

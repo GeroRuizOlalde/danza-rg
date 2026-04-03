@@ -20,13 +20,25 @@ const dmSans = DM_Sans({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://rgdanza.com'
 
 export const metadata: Metadata = {
-  title: 'R.G Danza — Academia de Danza en Córdoba',
-  description: 'Academia de danza en Córdoba. Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más. Clases para todas las edades y niveles. Río Negro 4450, Zona Sur.',
-  keywords: ['academia de danza', 'danza córdoba', 'ballet córdoba', 'jazz dance', 'contemporáneo', 'reggaetón', 'acro tela', 'clases de danza', 'danza zona sur córdoba'],
+  title: 'R.G Danza - Academia de Danza en Cordoba',
+  description:
+    'Academia de danza en Cordoba. Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas. Clases para todas las edades y niveles. Rio Negro 4450, Zona Sur.',
+  keywords: [
+    'academia de danza',
+    'danza cordoba',
+    'ballet cordoba',
+    'jazz dance',
+    'contemporaneo',
+    'reggaeton',
+    'acro tela',
+    'clases de danza',
+    'danza zona sur cordoba',
+  ],
   metadataBase: new URL(SITE_URL),
   openGraph: {
-    title: 'R.G Danza — Academia de Danza en Córdoba',
-    description: 'Academia de danza en Córdoba. Clases para todas las edades y niveles. Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más.',
+    title: 'R.G Danza - Academia de Danza en Cordoba',
+    description:
+      'Academia de danza en Cordoba. Clases para todas las edades y niveles. Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas.',
     siteName: 'R.G Danza',
     locale: 'es_AR',
     type: 'website',
@@ -36,14 +48,14 @@ export const metadata: Metadata = {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'R.G Danza — Academia de Danza en Córdoba',
+        alt: 'R.G Danza - Academia de Danza en Cordoba',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'R.G Danza — Academia de Danza en Córdoba',
-    description: 'Academia de danza en Córdoba. Clases para todas las edades y niveles.',
+    title: 'R.G Danza - Academia de Danza en Cordoba',
+    description: 'Academia de danza en Cordoba. Clases para todas las edades y niveles.',
     images: ['/og-image.jpg'],
   },
 }
@@ -52,14 +64,15 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'DanceSchool',
   name: 'R.G Danza',
-  description: 'Academia de danza en Córdoba. Clases de Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más para todas las edades.',
+  description:
+    'Academia de danza en Cordoba. Clases de Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas para todas las edades.',
   url: SITE_URL,
   telephone: '+5493516793151',
   address: {
     '@type': 'PostalAddress',
-    streetAddress: 'Río Negro 4450',
-    addressLocality: 'Córdoba',
-    addressRegion: 'Córdoba',
+    streetAddress: 'Rio Negro 4450',
+    addressLocality: 'Cordoba',
+    addressRegion: 'Cordoba',
     addressCountry: 'AR',
   },
   geo: {

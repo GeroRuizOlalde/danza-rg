@@ -40,7 +40,7 @@ export default function InscripcionForm({
     setEnviando(false)
 
     if (!result.success) {
-      setError(result.error || 'Hubo un error al enviar. Intentá de nuevo.')
+      setError(result.error || 'Hubo un error al enviar. Intenta de nuevo.')
       return
     }
 
@@ -54,10 +54,8 @@ export default function InscripcionForm({
   if (enviado) {
     return (
       <div className="text-center py-8">
-        <div className="text-5xl mb-4">🎉</div>
-        <h3 className="font-playfair text-xl text-[#1A1A22] mb-2">
-          ¡Recibimos tu consulta!
-        </h3>
+        <div className="text-5xl mb-4">OK</div>
+        <h3 className="font-playfair text-xl text-[#1A1A22] mb-2">Recibimos tu consulta</h3>
         <p className="text-[#8A8A99] text-sm mb-6 leading-relaxed">
           En breve nos comunicamos con vos por WhatsApp para coordinar tu clase de
           prueba.
@@ -94,7 +92,7 @@ export default function InscripcionForm({
       <input
         className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-[10px] px-4 py-3 text-sm outline-none focus:border-[#C97A96] transition-colors mb-5"
         type="tel"
-        placeholder="Teléfono (WhatsApp)"
+        placeholder="Telefono (WhatsApp)"
         required
         value={telefono}
         onChange={(e) => setTelefono(e.target.value)}
@@ -104,7 +102,7 @@ export default function InscripcionForm({
         value={disciplina}
         onChange={(e) => setDisciplina(e.target.value)}
       >
-        <option value="">Seleccioná una clase</option>
+        <option value="">Selecciona una clase</option>
         {clases.map((clase) => (
           <option key={clase.id} value={clase.nombre}>
             {clase.nombre}
@@ -120,7 +118,7 @@ export default function InscripcionForm({
         disabled={enviando}
         className="w-full bg-[#C97A96] text-white border-none rounded-full py-3.5 font-semibold cursor-pointer transition-colors hover:bg-[#1A1A22] disabled:bg-gray-300 disabled:cursor-not-allowed"
       >
-        {enviando ? 'Enviando...' : 'Enviar inscripción →'}
+        {enviando ? 'Enviando...' : 'Enviar inscripcion ->'}
       </button>
       <a
         href={`https://wa.me/${numeroLimpio}`}
@@ -128,7 +126,7 @@ export default function InscripcionForm({
         rel="noreferrer"
         className="block text-center text-[#C97A96] no-underline text-sm mt-4 hover:underline"
       >
-        💬 Escribinos por WhatsApp
+        Escribinos por WhatsApp
       </a>
     </form>
   )

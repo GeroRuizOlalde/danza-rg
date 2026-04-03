@@ -8,7 +8,7 @@ export default function Footer() {
   const [info, setInfo] = useState({
     nombre: 'R.G Danza',
     telefono: '351 679-3151',
-    direccion: 'Río Negro 4450, Zona Sur · Cba.',
+    direccion: 'Rio Negro 4450, Zona Sur - Cba.',
     instagram: '@r.g_danza',
   })
 
@@ -17,7 +17,8 @@ export default function Footer() {
       const { data } = await supabase.from('academia_info').select('*').single()
       if (data) setInfo(data)
     }
-    fetchInfo()
+
+    void fetchInfo()
   }, [])
 
   const numeroLimpio = info.telefono.replace(/\D/g, '')
@@ -26,26 +27,26 @@ export default function Footer() {
   const linkInstagram = `https://www.instagram.com/${instagramLimpio}/`
 
   const footerLinks = {
-    Páginas: [
-      { href: '/#nosotros', label: 'Quiénes somos' },
-      { href: '/clases',    label: 'Clases' },
+    Paginas: [
+      { href: '/#nosotros', label: 'Quienes somos' },
+      { href: '/clases', label: 'Clases' },
       { href: '/#horarios', label: 'Horarios' },
-      { href: '/#galeria',  label: 'Galería' },
-      { href: '/turnero',   label: 'Turnero' },
+      { href: '/#galeria', label: 'Galeria' },
+      { href: '/turnero', label: 'Turnero' },
     ],
     Disciplinas: [
-      { href: '/clases', label: 'Reggaetón' },
+      { href: '/clases', label: 'Reggaeton' },
       { href: '/clases', label: 'Jazz' },
       { href: '/clases', label: 'Acro Tela' },
-      { href: '/clases', label: 'Contemporáneo' },
-      { href: '/clases', label: 'Danzas Clásicas' },
+      { href: '/clases', label: 'Contemporaneo' },
+      { href: '/clases', label: 'Danzas Clasicas' },
       { href: '/clases', label: 'Ritmos Latinos' },
     ],
     Contacto: [
-      { href: `http://maps.google.com/?q=${encodeURIComponent(info.direccion)}`, label: `📍 ${info.direccion}` },
-      { href: `tel:+${numeroLimpio}`,  label: `📞 ${info.telefono}` },
-      { href: linkInstagram,           label: `📸 ${info.instagram}` },
-      { href: linkWhatsApp,            label: '💬 WhatsApp' },
+      { href: `http://maps.google.com/?q=${encodeURIComponent(info.direccion)}`, label: `Mapa: ${info.direccion}` },
+      { href: `tel:+${numeroLimpio}`, label: `Tel: ${info.telefono}` },
+      { href: linkInstagram, label: `IG: ${info.instagram}` },
+      { href: linkWhatsApp, label: 'WhatsApp' },
     ],
   }
 
@@ -61,22 +62,22 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#1A1A22] text-white pt-16 pb-8 px-[5%] md:px-[8%]">
-
-      {/* Top grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-10 lg:gap-12 pb-12 border-b border-white/[0.08]">
-
-        {/* Brand */}
         <div>
-          <Link href="/" className="font-playfair text-xl font-bold text-white no-underline inline-block mb-4">
+          <Link
+            href="/"
+            className="font-playfair text-xl font-bold text-white no-underline inline-block mb-4"
+          >
             {renderLogo()}
           </Link>
           <p className="text-sm text-white/45 leading-relaxed max-w-[280px]">
-            Un espacio creado con amor para que cada alumna encuentre su ritmo, su expresión y su lugar en el mundo de la danza.
+            Un espacio creado con amor para que cada alumna encuentre su ritmo, su
+            expresion y su lugar en el mundo de la danza.
           </p>
           <div className="flex gap-3 mt-6">
             {[
-              { href: linkInstagram, label: '📸', title: 'Instagram' },
-              { href: linkWhatsApp,  label: '💬', title: 'WhatsApp' },
+              { href: linkInstagram, label: 'IG', title: 'Instagram' },
+              { href: linkWhatsApp, label: 'WA', title: 'WhatsApp' },
             ].map(({ href, label, title }) => (
               <a
                 key={title}
@@ -92,7 +93,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Link columns */}
         {Object.entries(footerLinks).map(([title, links]) => (
           <div key={title}>
             <h5 className="text-xs font-semibold tracking-[1.5px] uppercase text-[#E8A0B4] mb-5">
@@ -103,8 +103,12 @@ export default function Footer() {
                 <li key={label}>
                   <Link
                     href={href}
-                    target={href.startsWith('http') || href.startsWith('tel:') ? '_blank' : undefined}
-                    rel={href.startsWith('http') || href.startsWith('tel:') ? 'noreferrer' : undefined}
+                    target={
+                      href.startsWith('http') || href.startsWith('tel:') ? '_blank' : undefined
+                    }
+                    rel={
+                      href.startsWith('http') || href.startsWith('tel:') ? 'noreferrer' : undefined
+                    }
                     className="no-underline text-sm text-white/45 hover:text-white/80 transition-colors"
                   >
                     {label}
@@ -116,14 +120,11 @@ export default function Footer() {
         ))}
       </div>
 
-      {/* Bottom bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center pt-8 gap-2">
         <p className="text-xs text-white/30">
-          © {new Date().getFullYear()} {info.nombre}. Todos los derechos reservados.
+          Copyright {new Date().getFullYear()} {info.nombre}. Todos los derechos reservados.
         </p>
-        <p className="text-xs text-white/20">
-          Diseñado con 💗
-        </p>
+        <p className="text-xs text-white/20">Disenado con amor</p>
       </div>
     </footer>
   )
