@@ -3,9 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { invitarAlumnaAction, eliminarAlumnaAction, cambiarEmailAction } from "./actions";
+import {
+  actualizarAlumnaAction,
+  actualizarChecklistAlumnaAction,
+  eliminarAlumnaAction,
+  invitarAlumnaAction,
+} from "./actions";
 import toast from "react-hot-toast";
 import { mesActualStr, calcularEdad } from "@/lib/utils";
+import { crearPagoAdminAction } from "../actions";
 
 type Alumna = {
   id: string;
@@ -148,18 +154,18 @@ export default function ClientesPage() {
       }
     }
 
-    const { error } = await supabase.from("pagos").insert([{
-      alumna_id: alumnaParaPago.id,
+    const result = await crearPagoAdminAction({
+      alumnaId: alumnaParaPago.id,
       monto: parseFloat(pagoForm.monto),
-      fecha_pago: pagoForm.fecha_pago,
-      mes_correspondiente: pagoForm.mes_correspondiente,
-      metodo_pago: pagoForm.metodo_pago,
-      nota: pagoForm.nota || null,
-      estado: "pagado",
-    }]);
+      fechaPago: pagoForm.fecha_pago,
+      mesCorrespondiente: pagoForm.mes_correspondiente,
+      metodoPago: pagoForm.metodo_pago,
+      nota: pagoForm.nota,
+      permitirDuplicado: Boolean(pagoExistente),
+    });
     setGuardandoPago(false);
-    if (error) {
-      toast.error("Error al registrar: " + error.message);
+    if (!result.success) {
+      toast.error("Error al registrar: " + result.error);
     } else {
       toast.success(`Pago registrado para ${alumnaParaPago.nombre}`);
       // Enviar comprobante por WhatsApp si está marcado
@@ -219,54 +225,27 @@ export default function ClientesPage() {
     setGuardandoEdit(true);
 
     // Si el email cambió, actualizar en auth vía server action
-    const alumnaOriginal = clientes.find(c => c.id === editForm.id);
-    const emailCambio = editForm.email && editForm.email !== (alumnaOriginal?.email || "");
+    const result = await actualizarAlumnaAction({
+      id: editForm.id,
+      nombre: editForm.nombre,
+      apellido: editForm.apellido,
+      telefono: editForm.telefono,
+      email: editForm.email,
+      fechaNacimiento: editForm.fecha_nacimiento,
+      estado: editForm.estado,
+      fechaInicio: editForm.fecha_inicio,
+    });
 
-    if (emailCambio) {
-      const result = await cambiarEmailAction(editForm.id, editForm.email);
-      if (!result.success) {
-        toast.error("Error al cambiar email: " + result.error);
-        setGuardandoEdit(false);
-        return;
-      }
-    }
-
-    const { error: errPerfil } = await supabase
-      .from("perfiles")
-      .update({
-        nombre: editForm.nombre,
-        apellido: editForm.apellido,
-        telefono: editForm.telefono,
-        ...(emailCambio ? {} : { email: editForm.email || null }),
-        fecha_nacimiento: editForm.fecha_nacimiento || null,
-        estado: editForm.estado,
-      })
-      .eq("id", editForm.id);
-
-    if (errPerfil) {
-      toast.error("Error al guardar: " + errPerfil.message);
+    if (!result.success) {
+      toast.error("Error al guardar: " + result.error);
       setGuardandoEdit(false);
       return;
     }
 
     // Actualizar fecha_inicio en alumna_clases si se proporcionó
-    if (editForm.fecha_inicio) {
-      const { data: inscExistente } = await supabase
-        .from("alumna_clases")
-        .select("id")
-        .eq("alumna_id", editForm.id)
-        .limit(1)
-        .single();
 
-      if (inscExistente) {
-        await supabase
-          .from("alumna_clases")
-          .update({ fecha_inicio: editForm.fecha_inicio })
-          .eq("id", inscExistente.id);
-      }
-    }
 
-    toast.success(`Datos de ${editForm.nombre} actualizados` + (emailCambio ? ` (email actualizado a ${editForm.email})` : ""));
+    toast.success(`Datos de ${editForm.nombre} actualizados`);
     setIsEditModalOpen(false);
     setGuardandoEdit(false);
     await fetchClientes();
@@ -321,10 +300,13 @@ export default function ClientesPage() {
 
   const toggleCheckbox = async (id: string, campo: string, valorActual: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
-    const { error } = await supabase.from("perfiles").update({ [campo]: !valorActual }).eq("id", id);
-    if (!error) {
-      setClientes(prev => prev.map(c => c.id === id ? { ...c, [campo]: !valorActual } : c));
+    const result = await actualizarChecklistAlumnaAction(id, campo, !valorActual);
+    if (!result.success) {
+      toast.error(result.error);
+      return;
     }
+
+    setClientes(prev => prev.map(c => c.id === id ? { ...c, [campo]: !valorActual } : c));
   };
 
   const enviarWhatsApp = (telefono: string, nombre: string, e?: React.MouseEvent) => {
@@ -368,13 +350,6 @@ export default function ClientesPage() {
     if (estado === "activa") return { label: "Activa", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" };
     if (estado === "baja") return { label: "Baja", cls: "bg-red-50 text-red-500 border-red-100" };
     return { label: "Nueva", cls: "bg-amber-50 text-amber-600 border-amber-100" };
-  };
-
-  const docWarning = (c: Alumna) => {
-    const faltantes = [];
-    if (!c.apto_medico) faltantes.push("Apto");
-    if (!c.fotocopia_dni) faltantes.push("DNI");
-    return faltantes;
   };
 
   return (
@@ -483,7 +458,6 @@ export default function ClientesPage() {
               {/* Filas de alumnas */}
               {grupo.map((c, idx) => {
                 const badge = estadoBadge(c.estado);
-                const docs = docWarning(c);
                 const isExpanded = expandedId === c.id;
                 const isLast = idx === grupo.length - 1;
 

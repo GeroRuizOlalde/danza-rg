@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { mesActualStr } from "@/lib/utils";
+import { crearPagoAdminAction } from "../actions";
 
 // ─── Tipos ────────────────────────────────────────────────────
 type Perfil = { id: string; nombre: string; apellido: string };
@@ -22,10 +23,6 @@ type Pago = {
 
 // ─── Constantes ───────────────────────────────────────────────
 const METODOS = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
-const MESES_NOMBRE = [
-  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
-  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
-];
 
 function getMetodoIcon(m: string) {
   if (m === "Efectivo") return "💵";
@@ -55,11 +52,6 @@ export default function PagosPage() {
   };
   const [form, setForm] = useState(formVacio);
 
-  // ── Carga inicial ──────────────────────────────────────────
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   async function fetchData() {
     setCargando(true);
     const [{ data: pagosData }, { data: perfilesData }] = await Promise.all([
@@ -77,20 +69,59 @@ export default function PagosPage() {
     setCargando(false);
   }
 
+  // ── Carga inicial ──────────────────────────────────────────
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
   // ── Guardar pago ───────────────────────────────────────────
   const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardando(true);
-    const { error } = await supabase.from("pagos").insert([
-      { ...form, monto: parseFloat(form.monto), estado: "pagado" },
-    ]);
-    if (!error) {
+
+    const intentarGuardar = async (permitirDuplicado = false) => {
+      const result = await crearPagoAdminAction({
+        alumnaId: form.alumna_id,
+        monto: parseFloat(form.monto),
+        fechaPago: form.fecha_pago,
+        mesCorrespondiente: form.mes_correspondiente,
+        metodoPago: form.metodo_pago,
+        nota: form.nota,
+        permitirDuplicado,
+      });
+
+      if (!result.success && result.requiresConfirmation) {
+        const confirmar = window.confirm(
+          `Ya existe un pago para "${form.mes_correspondiente}".\n\n¿Querés registrar otro de todas formas?`
+        );
+
+        if (confirmar) {
+          return intentarGuardar(true);
+        }
+
+        return false;
+      }
+
+      if (!result.success) {
+        toast.error("Error al guardar: " + result.error);
+        return false;
+      }
+
+      return true;
+    };
+
+    const guardadoOk = await intentarGuardar();
+
+    if (guardadoOk) {
       await fetchData();
       setIsModalOpen(false);
       setForm(formVacio);
-    } else {
-      toast.error("Error al guardar: " + error.message);
     }
+
     setGuardando(false);
   };
 

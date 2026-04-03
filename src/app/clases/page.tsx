@@ -36,7 +36,7 @@ type AcademiaInfo = {
 }
 
 export default async function ClasesPage() {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
 
   let clasesData: ClaseRecord[] | null = null
   let horariosData: HorarioRecord[] | null = null

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 const navLinks = [
@@ -15,7 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [nombreAcademia, setNombreAcademia] = useState("R.G Danza")
 
   const pathname = usePathname()
@@ -31,7 +32,13 @@ export default function Navbar() {
     }
     fetchNombre()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    async function fetchUser() {
+      const { data } = await supabase.auth.getUser()
+      setUser(data.user ?? null)
+    }
+    fetchUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null)
     })
 

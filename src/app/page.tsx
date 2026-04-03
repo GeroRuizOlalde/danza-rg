@@ -37,7 +37,7 @@ type HorarioRecord = {
 }
 
 export default async function HomePage() {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
 
   let info: Partial<AcademiaInfo> | null = null
   let clases: ClaseRecord[] | null = null

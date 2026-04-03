@@ -1,11 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { crearReservaLandingAction } from '@/app/actions/reservas'
 
 type ClaseOption = { id: string; nombre: string }
 
-export default function InscripcionForm({ telefonoDinamico, clases }: { telefonoDinamico: string; clases: ClaseOption[] }) {
+export default function InscripcionForm({
+  telefonoDinamico,
+  clases,
+}: {
+  telefonoDinamico: string
+  clases: ClaseOption[]
+}) {
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -18,34 +24,23 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!nombre || !telefono) return
+
     setEnviando(true)
     setError('')
 
-    const hoy = new Date()
-    const fechaISO = new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
-      .toISOString()
-      .split('T')[0]
-
-    // Vincular con perfil si está logueado
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const { error: err } = await supabase.from('reservas').insert([{
+    const result = await crearReservaLandingAction({
       nombre,
       apellido,
       telefono,
-      disciplina: disciplina || 'Asesoramiento',
-      fecha: fechaISO,
-      horario: 'A coordinar',
-      estado: 'pendiente',
-      origen: 'landing',
-      perfil_id: user?.id || null,
-    }])
+      disciplina,
+    })
 
     setEnviando(false)
 
-    if (err) {
-      setError('Hubo un error al enviar. Intentá de nuevo.')
+    if (!result.success) {
+      setError(result.error || 'Hubo un error al enviar. Intentá de nuevo.')
       return
     }
 
@@ -64,7 +59,8 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
           ¡Recibimos tu consulta!
         </h3>
         <p className="text-[#8A8A99] text-sm mb-6 leading-relaxed">
-          En breve nos comunicamos con vos por WhatsApp para coordinar tu clase de prueba.
+          En breve nos comunicamos con vos por WhatsApp para coordinar tu clase de
+          prueba.
         </p>
         <button
           onClick={() => setEnviado(false)}
@@ -81,34 +77,43 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <input
           className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-[10px] px-4 py-3 text-sm outline-none focus:border-[#C97A96] transition-colors"
-          type="text" placeholder="Nombre" required
-          value={nombre} onChange={e => setNombre(e.target.value)}
+          type="text"
+          placeholder="Nombre"
+          required
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
         />
         <input
           className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-[10px] px-4 py-3 text-sm outline-none focus:border-[#C97A96] transition-colors"
-          type="text" placeholder="Apellido"
-          value={apellido} onChange={e => setApellido(e.target.value)}
+          type="text"
+          placeholder="Apellido"
+          value={apellido}
+          onChange={(e) => setApellido(e.target.value)}
         />
       </div>
       <input
         className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-[10px] px-4 py-3 text-sm outline-none focus:border-[#C97A96] transition-colors mb-5"
-        type="tel" placeholder="Teléfono (WhatsApp)" required
-        value={telefono} onChange={e => setTelefono(e.target.value)}
+        type="tel"
+        placeholder="Teléfono (WhatsApp)"
+        required
+        value={telefono}
+        onChange={(e) => setTelefono(e.target.value)}
       />
       <select
         className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-[10px] px-4 py-3 text-sm outline-none focus:border-[#C97A96] bg-white transition-colors mb-5"
-        value={disciplina} onChange={e => setDisciplina(e.target.value)}
+        value={disciplina}
+        onChange={(e) => setDisciplina(e.target.value)}
       >
         <option value="">Seleccioná una clase</option>
-        {clases.map(c => (
-          <option key={c.id} value={c.nombre}>{c.nombre}</option>
+        {clases.map((clase) => (
+          <option key={clase.id} value={clase.nombre}>
+            {clase.nombre}
+          </option>
         ))}
         <option value="Asesoramiento">Quiero asesoramiento</option>
       </select>
 
-      {error && (
-        <p className="text-red-500 text-xs mb-3">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
 
       <button
         type="submit"
@@ -120,6 +125,7 @@ export default function InscripcionForm({ telefonoDinamico, clases }: { telefono
       <a
         href={`https://wa.me/${numeroLimpio}`}
         target="_blank"
+        rel="noreferrer"
         className="block text-center text-[#C97A96] no-underline text-sm mt-4 hover:underline"
       >
         💬 Escribinos por WhatsApp

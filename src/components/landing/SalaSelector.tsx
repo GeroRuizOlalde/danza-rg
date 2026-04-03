@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 type Celda = { clase: string; nivel: string | null } | null
 
@@ -12,8 +12,26 @@ type Horario = {
   clases?: { nombre: string } | null
 }
 
+type FilaHorario = {
+  hs: number
+  lun: Celda
+  mar: Celda
+  mie: Celda
+  jue: Celda
+  vie: Celda
+}
+
+const CLAVES_DIA: Record<string, keyof Omit<FilaHorario, 'hs'>> = {
+  lunes: 'lun',
+  martes: 'mar',
+  miercoles: 'mie',
+  jueves: 'jue',
+  viernes: 'vie',
+}
+
 function CeldaHorario({ celda }: { celda: Celda }) {
-  if (!celda) return <td className="text-white/15">—</td>
+  if (!celda) return <td className="text-white/15">-</td>
+
   return (
     <td>
       {celda.clase}
@@ -32,25 +50,31 @@ export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
   const norm = (str: string) =>
     str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
-  const claves: Record<string, string> = {
-    lunes: 'lun', martes: 'mar', miercoles: 'mie', jueves: 'jue', viernes: 'vie',
-  }
-
   const grillaHoraria = useMemo(() => {
     const horas = [17, 18, 19, 20, 21]
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 
-    return horas.map(h => {
-      const fila: any = { hs: h }
-      dias.forEach(d => {
+    return horas.map((hora) => {
+      const fila: FilaHorario = {
+        hs: hora,
+        lun: null,
+        mar: null,
+        mie: null,
+        jue: null,
+        vie: null,
+      }
+
+      dias.forEach((dia) => {
         const coincidencia = horarios.find(
-          item => item.hora === h && norm(item.dia ?? '') === norm(d) && item.sala === sala
+          (item) => item.hora === hora && norm(item.dia ?? '') === norm(dia) && item.sala === sala
         )
-        const clave = claves[norm(d)] ?? norm(d).slice(0, 3)
+        const clave = CLAVES_DIA[norm(dia)]
+
         fila[clave] = coincidencia
           ? { clase: coincidencia.clases?.nombre ?? 'Clase', nivel: coincidencia.nivel ?? null }
           : null
       })
+
       return fila
     })
   }, [horarios, sala])
@@ -58,17 +82,17 @@ export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
   return (
     <>
       <div className="flex gap-3 mb-8">
-        {([1, 2] as const).map((n) => (
+        {([1, 2] as const).map((numero) => (
           <button
-            key={n}
-            onClick={() => setSala(n)}
+            key={numero}
+            onClick={() => setSala(numero)}
             className={`px-6 py-2 rounded-full cursor-pointer transition-all ${
-              sala === n
+              sala === numero
                 ? 'bg-[#C97A96] text-white border-none'
                 : 'bg-transparent text-white border-[1.5px] border-[#E8A0B4]/30'
             }`}
           >
-            Sala {n}
+            Sala {numero}
           </button>
         ))}
       </div>
@@ -86,9 +110,11 @@ export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
             </tr>
           </thead>
           <tbody>
-            {grillaHoraria.map((row: any) => (
+            {grillaHoraria.map((row) => (
               <tr key={row.hs}>
-                <td><strong className="text-[#E8A0B4]">{row.hs}</strong></td>
+                <td>
+                  <strong className="text-[#E8A0B4]">{row.hs}</strong>
+                </td>
                 <CeldaHorario celda={row.lun} />
                 <CeldaHorario celda={row.mar} />
                 <CeldaHorario celda={row.mie} />

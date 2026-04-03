@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { getIniciales, getAvatarColor } from "@/lib/utils";
+import { actualizarReservaEstadoAdminAction, crearReservaAdminAction, eliminarReservaAdminAction } from "../actions";
 
 type Reserva = {
   id: string;
@@ -72,9 +73,9 @@ export default function TurnosPage() {
 
   // Cambiar estado
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
-    const { error } = await supabase.from('reservas').update({ estado: nuevoEstado }).eq('id', id);
-    if (error) {
-      toast.error("Error al actualizar el estado.");
+    const result = await actualizarReservaEstadoAdminAction(id, nuevoEstado);
+    if (!result.success) {
+      toast.error(result.error);
       return;
     }
     setTurnos(prev => prev.map(t => t.id === id ? { ...t, estado: nuevoEstado } : t));
@@ -88,10 +89,10 @@ export default function TurnosPage() {
       return;
     }
     setGuardando(true);
-    const { error } = await supabase.from('reservas').insert([nuevoTurno]);
+    const result = await crearReservaAdminAction(nuevoTurno);
     setGuardando(false);
-    if (error) {
-      toast.error("Error al crear el turno: " + error.message);
+    if (!result.success) {
+      toast.error(result.error);
       return;
     }
     setIsModalOpen(false);
@@ -101,13 +102,14 @@ export default function TurnosPage() {
 
   // Eliminar turno
   const eliminarTurno = async (id: string) => {
-    const { error } = await supabase.from('reservas').delete().eq('id', id);
-    if (!error) {
-      setTurnos(prev => prev.filter(t => t.id !== id));
-      setDeletingId(null);
-    } else {
-      toast.error("Error al eliminar.");
+    const result = await eliminarReservaAdminAction(id);
+    if (!result.success) {
+      toast.error(result.error);
+      return;
     }
+
+    setTurnos(prev => prev.filter(t => t.id !== id));
+    setDeletingId(null);
   };
 
 

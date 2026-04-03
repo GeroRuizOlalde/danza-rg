@@ -3,7 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabasePublicEnv } from '@/lib/supabase-env'
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
+  const pathname = request.nextUrl.pathname
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminLogin = pathname === '/admin/login'
+  const isPerfilRoute = pathname.startsWith('/perfil')
+
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -12,31 +17,23 @@ export async function proxy(request: NextRequest) {
   const { url, anonKey, isConfigured } = getSupabasePublicEnv()
 
   if (!isConfigured) {
+    if (isAdminRoute || isPerfilRoute) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
     return response
   }
 
   const supabase = createServerClient(url!, anonKey!, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value
+      getAll() {
+        return request.cookies.getAll()
       },
-      set(name: string, value: string, options: Record<string, unknown>) {
-        request.cookies.set({ name, value, ...options })
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          request.cookies.set(name, value)
+          response.cookies.set(name, value, options)
         })
-        response.cookies.set({ name, value, ...options })
-      },
-      remove(name: string, options: Record<string, unknown>) {
-        request.cookies.set({ name, value: '', ...options })
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        })
-        response.cookies.delete({ name, ...options })
       },
     },
   })
@@ -44,11 +41,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const pathname = request.nextUrl.pathname
-  const isAdminRoute = pathname.startsWith('/admin')
-  const isAdminLogin = pathname === '/admin/login'
-  const isPerfilRoute = pathname.startsWith('/perfil')
 
   if (isAdminLogin) return response
 

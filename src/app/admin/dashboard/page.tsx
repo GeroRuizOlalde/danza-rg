@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
+import { actualizarAdminDisplayNameAction } from "../actions";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
@@ -23,9 +25,26 @@ type CumpleItem = {
   fecha_nacimiento: string;
 };
 
+type PerfilDashboard = CumpleItem & {
+  id: string;
+  estado: string | null;
+  created_at?: string | null;
+};
+
+type ReservaDashboard = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  fecha: string | null;
+  horario: string;
+  disciplina: string;
+  estado: string;
+  created_at?: string | null;
+};
+
 export default function DashboardPage() {
   const [metricas, setMetricas] = useState({ activas: 0, nuevas: 0, turnosPendientes: 0, turnosTotal: 0, clasesHoy: 0 });
-  const [proximosTurnos, setProximosTurnos] = useState<any[]>([]);
+  const [proximosTurnos, setProximosTurnos] = useState<ReservaDashboard[]>([]);
   const [actividad, setActividad] = useState<ActividadItem[]>([]);
   const [cumpleHoy, setCumpleHoy] = useState<CumpleItem[]>([]);
   const [proximosCumples, setProximosCumples] = useState<CumpleItem[]>([]);
@@ -64,8 +83,8 @@ export default function DashboardPage() {
           supabase.from('horarios').select('id').eq('dia', nombreDiaHoy),
         ]);
 
-        const perfiles = resPerfiles.data || [];
-        const reservas = resReservas.data || [];
+        const perfiles: PerfilDashboard[] = resPerfiles.data || [];
+        const reservas: ReservaDashboard[] = resReservas.data || [];
 
         // Cumpleaños
         const hoy = new Date();
@@ -74,7 +93,7 @@ export default function DashboardPage() {
         const hoyList: CumpleItem[] = [];
         const semanaList: CumpleItem[] = [];
 
-        perfiles.forEach((p: any) => {
+        perfiles.forEach((p) => {
           if (!p.fecha_nacimiento) return;
           const f = new Date(p.fecha_nacimiento);
           const cumpleDate = new Date(f.getTime() + f.getTimezoneOffset() * 60000);
@@ -94,9 +113,9 @@ export default function DashboardPage() {
 
         // Métricas
         setMetricas({
-          activas: perfiles.filter((p: any) => p.estado === 'activa').length,
-          nuevas: perfiles.filter((p: any) => p.estado === 'nueva' || !p.estado).length,
-          turnosPendientes: reservas.filter((r: any) => r.estado === 'pendiente').length,
+          activas: perfiles.filter((p) => p.estado === 'activa').length,
+          nuevas: perfiles.filter((p) => p.estado === 'nueva' || !p.estado).length,
+          turnosPendientes: reservas.filter((r) => r.estado === 'pendiente').length,
           turnosTotal: reservas.length,
           clasesHoy: resHorarios.data?.length || 0,
         });
@@ -104,14 +123,14 @@ export default function DashboardPage() {
         // Próximos turnos
         setProximosTurnos(
           reservas
-            .filter((r: any) => r.estado !== 'cancelado')
-            .sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+            .filter((r) => r.estado !== 'cancelado')
+            .sort((a, b) => new Date(a.fecha || '').getTime() - new Date(b.fecha || '').getTime())
             .slice(0, 3)
         );
 
         // Actividad reciente — ya sin JSX en el estado
         const mixActividad: ActividadItem[] = [
-          ...perfiles.slice(0, 5).map((a: any) => ({
+          ...perfiles.slice(0, 5).map((a) => ({
             id: `al-${a.id}`,
             fecha: new Date(a.created_at || Date.now()),
             tipo: 'alumno' as const,
@@ -120,7 +139,7 @@ export default function DashboardPage() {
             disciplina: '',
             dot: "bg-[#C97A96]",
           })),
-          ...reservas.slice(0, 5).map((r: any) => ({
+          ...reservas.slice(0, 5).map((r) => ({
             id: `res-${r.id}`,
             fecha: new Date(r.created_at || Date.now()),
             tipo: 'reserva' as const,
@@ -143,15 +162,18 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [nombreDiaHoy]);
 
-  const handleGuardarNombre = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGuardarNombre = async () => {
     if (!tempName.trim()) return;
     setGuardandoNombre(true);
-    const { error } = await supabase.auth.updateUser({ data: { display_name: tempName.trim() } });
-    if (!error) {
-      setAdminName(tempName.trim());
+    const result = await actualizarAdminDisplayNameAction(tempName.trim());
+
+    if (result.success) {
+      setAdminName(result.data?.displayName || tempName.trim());
       setShowNameModal(false);
+    } else {
+      toast.error(result.error);
     }
+
     setGuardandoNombre(false);
   };
 
@@ -356,11 +378,16 @@ export default function DashboardPage() {
                 type="text" autoFocus required
                 value={tempName}
                 onChange={(e) => setTempName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleGuardarNombre(e as any)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleGuardarNombre();
+                  }
+                }}
                 className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none mb-6 text-center font-medium focus:border-[#C97A96] transition-all"
               />
               <button
-                onClick={handleGuardarNombre}
+                onClick={() => void handleGuardarNombre()}
                 disabled={guardandoNombre || !tempName.trim()}
                 className="w-full bg-[#C97A96] text-white py-3.5 rounded-full text-[0.85rem] font-semibold hover:bg-[#1A1A22] transition-all disabled:opacity-50"
               >

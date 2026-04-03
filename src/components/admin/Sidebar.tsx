@@ -35,9 +35,9 @@ export default function Sidebar() {
     fetchSidebarData();
 
     const canal = supabase.channel('cambios-reservas')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, () => {
-        supabase.from('reservas').select('id').eq('estado', 'pendiente')
-          .then(({ data }) => setTurnosPendientes(data?.length || 0));
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, async () => {
+        const { data } = await supabase.from('reservas').select('id').eq('estado', 'pendiente');
+        setTurnosPendientes(data?.length || 0);
       })
       .subscribe();
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
+import { eliminarClaseAdminAction, guardarClaseAdminAction } from "../actions";
 
 type Clase = {
   id: string;
@@ -81,20 +82,12 @@ export default function ClasesPage() {
     setIsSubmitting(true);
 
     try {
-      if (editingId) {
-        // ACTUALIZAR
-        const { error } = await supabase
-          .from("clases")
-          .update(formData)
-          .eq("id", editingId);
-        if (error) throw error;
-      } else {
-        // CREAR NUEVA
-        const { error } = await supabase
-          .from("clases")
-          .insert([formData]);
-        if (error) throw error;
-      }
+      const result = await guardarClaseAdminAction({
+        id: editingId || undefined,
+        ...formData,
+      });
+
+      if (!result.success) throw new Error(result.error);
 
       await fetchClases(); // Recargamos la lista
       setIsModalOpen(false);
@@ -111,8 +104,8 @@ export default function ClasesPage() {
     if (!window.confirm(`¿Estás seguro de eliminar la clase "${nombre}"? Se borrarán también sus horarios asociados.`)) return;
     
     try {
-      const { error } = await supabase.from("clases").delete().eq("id", id);
-      if (error) throw error;
+      const result = await eliminarClaseAdminAction(id);
+      if (!result.success) throw new Error(result.error);
       setClases(clases.filter(c => c.id !== id));
     } catch (error) {
       console.error("Error al eliminar:", error);

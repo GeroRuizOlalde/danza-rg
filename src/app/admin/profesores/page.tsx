@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
+import {
+  guardarProfesorAdminAction,
+  marcarAsistenciaProfesorAdminAction,
+  toggleProfesorActivoAdminAction,
+} from "../actions";
 
 // ─── Tipos ────────────────────────────────────────────────────
 type Profesor = {
@@ -61,6 +66,7 @@ export default function ProfesoresPage() {
 
   // Historial filters
   const hoy = new Date();
+  const hoyStrActual = useMemo(() => new Date().toISOString().split("T")[0], []);
   const [mesFiltro, setMesFiltro] = useState(hoy.getMonth());
   const [anioFiltro, setAnioFiltro] = useState(hoy.getFullYear());
   const [vistaHistorial, setVistaHistorial] = useState<"matriz" | "profesor" | "dia">("matriz");
@@ -95,19 +101,19 @@ export default function ProfesoresPage() {
     const { data, error: err } = await supabase
       .from("asistencia_profesores")
       .select("*")
-      .gte("fecha", hoy.toISOString().split("T")[0] < desde ? hoy.toISOString().split("T")[0] : desde)
+      .gte("fecha", hoyStrActual < desde ? hoyStrActual : desde)
       .lte("fecha", hasta);
     if (err) throw new Error(err.message);
     setAsistencias(data ?? []);
-  }, [mesFiltro, anioFiltro]);
+  }, [mesFiltro, anioFiltro, hoyStrActual]);
 
   const fetchTodo = useCallback(async () => {
     setCargando(true);
     setError(null);
     try {
       await Promise.all([fetchProfesores(), fetchAsistencias()]);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No pudimos cargar los datos.");
     } finally {
       setCargando(false);
     }
@@ -137,27 +143,33 @@ export default function ProfesoresPage() {
   const marcarAsistencia = async (profesorId: string, presente: boolean) => {
     setLoadingBtn(profesorId);
     try {
-      const existente = asistencias.find(a => a.profesor_id === profesorId && a.fecha === hoyStr);
-      if (existente) {
-        const { error: err } = await supabase
-          .from("asistencia_profesores")
-          .update({ presente })
-          .eq("id", existente.id);
-        if (err) throw err;
-        setAsistencias(prev =>
-          prev.map(a => a.id === existente.id ? { ...a, presente } : a)
-        );
-      } else {
-        const { data, error: err } = await supabase
-          .from("asistencia_profesores")
-          .insert([{ profesor_id: profesorId, fecha: hoyStr, presente }])
-          .select()
-          .single();
-        if (err) throw err;
-        if (data) setAsistencias(prev => [...prev, data]);
+      const result = await marcarAsistenciaProfesorAdminAction({
+        profesorId,
+        fecha: hoyStr,
+        presente,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
       }
-    } catch (e: any) {
-      toast.error("Error: " + e.message);
+
+      const asistenciaActualizada = result.data;
+
+      if (!asistenciaActualizada) {
+        throw new Error("No recibimos la asistencia actualizada.");
+      }
+
+      setAsistencias((prev) => {
+        const yaExiste = prev.some((item) => item.id === asistenciaActualizada.id);
+
+        if (yaExiste) {
+          return prev.map((item) => item.id === asistenciaActualizada.id ? asistenciaActualizada : item);
+        }
+
+        return [...prev, asistenciaActualizada];
+      });
+    } catch (error) {
+      toast.error("Error: " + (error instanceof Error ? error.message : "No pudimos guardar la asistencia."));
     } finally {
       setLoadingBtn(null);
     }
@@ -219,26 +231,34 @@ export default function ProfesoresPage() {
     e.preventDefault();
     setGuardando(true);
     try {
-      const payload = { nombre: form.nombre.trim(), apellido: form.apellido.trim(), telefono: form.telefono.trim() || null, disciplina: form.disciplina.trim(), activo: form.activo };
-      if (editando) {
-        const { error: err } = await supabase.from("profesores").update(payload).eq("id", editando.id);
-        if (err) throw err;
-      } else {
-        const { error: err } = await supabase.from("profesores").insert([payload]);
-        if (err) throw err;
-      }
+      const result = await guardarProfesorAdminAction({
+        id: editando?.id,
+        nombre: form.nombre,
+        apellido: form.apellido,
+        telefono: form.telefono,
+        disciplina: form.disciplina,
+        activo: form.activo,
+      });
+
+      if (!result.success) throw new Error(result.error);
+
       await fetchProfesores();
       setModalOpen(false);
-    } catch (e: any) {
-      toast.error("Error: " + e.message);
+    } catch (error) {
+      toast.error("Error: " + (error instanceof Error ? error.message : "No pudimos guardar el profesor."));
     } finally {
       setGuardando(false);
     }
   };
 
   const toggleActivo = async (p: Profesor) => {
-    const { error: err } = await supabase.from("profesores").update({ activo: !p.activo }).eq("id", p.id);
-    if (!err) setProfesores(prev => prev.map(x => x.id === p.id ? { ...x, activo: !x.activo } : x));
+    const result = await toggleProfesorActivoAdminAction(p.id, !p.activo);
+    if (!result.success) {
+      toast.error(result.error);
+      return;
+    }
+
+    setProfesores(prev => prev.map(x => x.id === p.id ? { ...x, activo: !p.activo } : x));
   };
 
   // ── Stats globales HOY ─────────────────────────────────────
