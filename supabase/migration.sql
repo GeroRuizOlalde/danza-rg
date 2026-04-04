@@ -433,7 +433,7 @@ BEGIN
   VALUES (
     v_reserva_id,
     NULLIF(BTRIM(p_nombre), ''),
-    NULLIF(BTRIM(p_apellido), ''),
+    COALESCE(NULLIF(BTRIM(p_apellido), ''), ''),
     NULLIF(BTRIM(p_telefono), ''),
     NULLIF(BTRIM(p_email), ''),
     NULLIF(BTRIM(p_disciplina), ''),

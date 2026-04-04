@@ -91,7 +91,7 @@ async function crearReservaAtomica(input: CrearReservaRpcInput): Promise<Reserva
 
   const { error } = await supabaseAdmin.rpc('crear_reserva_segura', {
     p_nombre: input.nombre,
-    p_apellido: input.apellido || null,
+    p_apellido: input.apellido || '',
     p_telefono: input.telefono || null,
     p_email: input.email || null,
     p_disciplina: input.disciplina,
