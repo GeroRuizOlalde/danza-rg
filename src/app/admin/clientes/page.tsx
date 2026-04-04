@@ -27,6 +27,7 @@ type Alumna = {
 };
 
 type PerfilPago = { id: string; nombre: string; apellido: string };
+type ClaseOption = { id: string; nombre: string };
 
 const FILTROS = ["Todas", "Activas", "Nuevas", "Pendientes Doc"];
 const METODOS_PAGO = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
@@ -35,6 +36,7 @@ const METODOS_PAGO = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
 export default function ClientesPage() {
   const searchParams = useSearchParams();
   const [clientes, setClientes] = useState<Alumna[]>([]);
+  const [clasesCatalogo, setClasesCatalogo] = useState<ClaseOption[]>([]);
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [filtroActivo, setFiltroActivo] = useState("Todas");
@@ -69,6 +71,7 @@ export default function ClientesPage() {
     fecha_nacimiento: "",
     estado: "nueva",
     fecha_inicio: "",
+    clase_id: "",
   });
   const [guardandoEdit, setGuardandoEdit] = useState(false);
 
@@ -81,7 +84,9 @@ export default function ClientesPage() {
   const [avisando, setAvisando] = useState(false);
   const [avisoProgreso, setAvisoProgreso] = useState({ enviados: 0, total: 0 });
 
-  useEffect(() => { fetchClientes(); }, []);
+  useEffect(() => {
+    void Promise.all([fetchClientes(), fetchClasesCatalogo()]);
+  }, []);
 
   async function fetchClientes() {
     setCargando(true);
@@ -96,6 +101,18 @@ export default function ClientesPage() {
       console.error("Error cargando perfiles:", error);
     } finally {
       setCargando(false);
+    }
+  }
+
+  async function fetchClasesCatalogo() {
+    const { data, error } = await supabase
+      .from("clases")
+      .select("id, nombre")
+      .eq("estado", "activa")
+      .order("nombre", { ascending: true });
+
+    if (!error && data) {
+      setClasesCatalogo(data);
     }
   }
 
@@ -200,7 +217,7 @@ export default function ClientesPage() {
     // Buscar fecha_inicio en alumna_clases
     const { data: inscripcion, error: inscripcionError } = await supabase
       .from("alumna_clases")
-      .select("fecha_inicio")
+      .select("fecha_inicio, clase_id")
       .eq("alumna_id", alumna.id)
       .order("fecha_inicio", { ascending: true })
       .limit(1)
@@ -221,6 +238,7 @@ export default function ClientesPage() {
       fecha_nacimiento: alumna.fecha_nacimiento || "",
       estado: alumna.estado || "nueva",
       fecha_inicio: inscripcion?.fecha_inicio || "",
+      clase_id: inscripcion?.clase_id || "",
     });
     setIsEditModalOpen(true);
   };
@@ -240,6 +258,7 @@ export default function ClientesPage() {
       fechaNacimiento: editForm.fecha_nacimiento,
       estado: editForm.estado,
       fechaInicio: editForm.fecha_inicio,
+      claseId: editForm.clase_id,
     });
 
     if (!result.success) {
@@ -698,6 +717,20 @@ export default function ClientesPage() {
                 <input required type="text" value={formInscribir.nombre} onChange={e => setFormInscribir({...formInscribir, nombre: e.target.value})} className="w-full border border-[#E8A0B4]/30 rounded-2xl px-5 py-3 text-sm outline-none focus:border-[#C97A96] transition-all bg-[#F7F7F9]/50" />
               </div>
               <div>
+                <label className="hidden text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Clase principal</label>
+                <select
+                  value={editForm.clase_id}
+                  onChange={e => setEditForm({...editForm, clase_id: e.target.value})}
+                  className="hidden w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
+                >
+                  <option value="">Seleccionar clase</option>
+                  {clasesCatalogo.map((clase) => (
+                    <option key={clase.id} value={clase.id}>{clase.nombre}</option>
+                  ))}
+                </select>
+                <p className="hidden text-[0.7rem] text-[#8A8A99] mt-1">Se usa para crear o actualizar la inscripción principal.</p>
+              </div>
+              <div>
                 <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-2">Apellido</label>
                 <input required type="text" value={formInscribir.apellido} onChange={e => setFormInscribir({...formInscribir, apellido: e.target.value})} className="w-full border border-[#E8A0B4]/30 rounded-2xl px-5 py-3 text-sm outline-none focus:border-[#C97A96] transition-all bg-[#F7F7F9]/50" />
               </div>
@@ -793,6 +826,18 @@ export default function ClientesPage() {
                 </div>
               </div>
               <div>
+                <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Clase principal</label>
+                <select
+                  value={editForm.clase_id}
+                  onChange={e => setEditForm({...editForm, clase_id: e.target.value})}
+                  className="mb-3 w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-3 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
+                >
+                  <option value="">Seleccionar clase</option>
+                  {clasesCatalogo.map((clase) => (
+                    <option key={clase.id} value={clase.id}>{clase.nombre}</option>
+                  ))}
+                </select>
+                <p className="mb-3 text-[0.7rem] text-[#8A8A99] mt-1">Se usa para crear o actualizar la inscripción principal.</p>
                 <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Fecha de Inicio (inscripción real)</label>
                 <input
                   type="date"

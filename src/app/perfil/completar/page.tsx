@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { User } from "@supabase/supabase-js";
+import { completarPerfilInvitadoAction } from "@/app/actions/cuenta";
 import { supabase } from "@/lib/supabase";
 
 export default function CompletarPerfil() {
@@ -75,11 +76,28 @@ export default function CompletarPerfil() {
     setLoading(true);
 
     try {
+      const result = await completarPerfilInvitadoAction({
+        password,
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        telefono: formData.telefono,
+        fechaNacimiento: formData.fecha_nacimiento,
+        autorizaImagen: formData.autoriza_imagen,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Cuenta configurada con éxito. Ya podés reservar.");
+      router.push("/turnero");
+      return;
+
       const { error: authError } = await supabase.auth.updateUser({ password });
       if (authError) throw authError;
 
       const { error: dbError } = await supabase.from("perfiles").upsert({
-        id: user.id,
+        id: user?.id || "",
         ...formData,
         updated_at: new Date().toISOString(),
       });

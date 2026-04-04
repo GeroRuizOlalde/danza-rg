@@ -16,7 +16,7 @@ type Reserva = {
   apellido: string;
   telefono: string;
   disciplina: string;
-  fecha: string;
+  fecha: string | null;
   horario: string;
   estado: string;
   origen?: string;
@@ -97,6 +97,13 @@ function getHorarioSortValue(horario: string) {
 }
 
 function compareTurnosAsc(a: Reserva, b: Reserva) {
+  if (!a.fecha && !b.fecha) {
+    return getHorarioSortValue(a.horario).localeCompare(getHorarioSortValue(b.horario));
+  }
+
+  if (!a.fecha) return 1;
+  if (!b.fecha) return -1;
+
   if (a.fecha !== b.fecha) {
     return a.fecha.localeCompare(b.fecha);
   }
@@ -109,6 +116,10 @@ function compareTurnosDesc(a: Reserva, b: Reserva) {
 }
 
 function compareTurnosPorProximidad(a: Reserva, b: Reserva, hoyIso: string) {
+  if (!a.fecha && !b.fecha) return compareTurnosAsc(a, b);
+  if (!a.fecha) return 1;
+  if (!b.fecha) return -1;
+
   const aEsProximo = a.fecha >= hoyIso;
   const bEsProximo = b.fecha >= hoyIso;
 
@@ -123,7 +134,8 @@ function compareTurnosPorProximidad(a: Reserva, b: Reserva, hoyIso: string) {
   return aEsProximo ? -1 : 1;
 }
 
-function esEstaSemana(fecha: string, hoyIso: string) {
+function esEstaSemana(fecha: string | null, hoyIso: string) {
+  if (!fecha) return false;
   const hoy = new Date(`${hoyIso}T00:00:00`);
   const fechaTurno = new Date(`${fecha}T00:00:00`);
   const diffTime = fechaTurno.getTime() - hoy.getTime();
@@ -131,13 +143,14 @@ function esEstaSemana(fecha: string, hoyIso: string) {
   return diffDays >= 0 && diffDays <= 7;
 }
 
-function getDiffDays(fecha: string, hoyIso: string) {
+function getDiffDays(fecha: string | null, hoyIso: string) {
+  if (!fecha) return Number.POSITIVE_INFINITY;
   const hoy = new Date(`${hoyIso}T00:00:00`);
   const fechaTurno = new Date(`${fecha}T00:00:00`);
   return Math.floor((fechaTurno.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function isArchivedTurno(fecha: string, hoyIso: string) {
+function isArchivedTurno(fecha: string | null, hoyIso: string) {
   return getDiffDays(fecha, hoyIso) <= -ARCHIVE_AFTER_DAYS;
 }
 
@@ -327,8 +340,8 @@ export default function TurnosPage() {
   const turnosFiltrados = useMemo(() => {
     const base = filtroActivo === "Archivados" ? turnosArchivados : turnosOperativos;
     const filtrados = base.filter((turno) => {
-      if (filtroActivo === "Todos") return turno.fecha >= hoyIso;
-      if (filtroActivo === "Pasados") return turno.fecha < hoyIso;
+      if (filtroActivo === "Todos") return !turno.fecha || turno.fecha >= hoyIso;
+      if (filtroActivo === "Pasados") return turno.fecha !== null && turno.fecha < hoyIso;
       if (filtroActivo === "Archivados") return true;
       if (filtroActivo === "Pendientes") return turno.estado === "pendiente";
       if (filtroActivo === "Confirmados") return turno.estado === "confirmado";
@@ -469,8 +482,12 @@ export default function TurnosPage() {
               </thead>
               <tbody>
                 {turnosFiltrados.map((turno) => {
-                  const [, mes, dia] = turno.fecha.split("-");
-                  const fechaVisual = `${dia}/${mes}`;
+                  const fechaVisual = turno.fecha
+                    ? (() => {
+                        const [, mes, dia] = turno.fecha.split("-");
+                        return `${dia}/${mes}`;
+                      })()
+                    : "A coordinar";
 
                   return (
                     <tr

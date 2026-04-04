@@ -1,9 +1,6 @@
 'use server'
 
-import {
-  createAdminSupabase,
-  createServerSupabase,
-} from '@/lib/supabase-server'
+import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
 import {
   missingSupabaseEnvMessage,
   missingSupabaseServiceEnvMessage,
@@ -14,6 +11,18 @@ type FinalizarCuentaInput = {
   nombre?: string
   apellido?: string
   telefono?: string
+}
+
+type PerfilClienteInput = {
+  nombre: string
+  apellido: string
+  telefono: string
+  fechaNacimiento?: string
+  autorizaImagen?: boolean
+}
+
+type CompletarPerfilInvitadoInput = PerfilClienteInput & {
+  password: string
 }
 
 type FinalizarCuentaResult = {
@@ -32,13 +41,15 @@ type PerfilActual = {
   nombre: string | null
   apellido: string | null
   telefono: string | null
+  fecha_nacimiento: string | null
+  autoriza_imagen: boolean | null
 }
 
 function normalizarEmail(value?: string | null) {
   return value?.trim().toLowerCase() ?? ''
 }
 
-async function getAuthenticatedUser() {
+async function getAuthenticatedContext() {
   const supabase = await createServerSupabase()
 
   if (!supabase) {
@@ -53,24 +64,26 @@ async function getAuthenticatedUser() {
     throw new Error('Necesitás iniciar sesión para continuar.')
   }
 
-  return { supabase, user }
-}
-
-async function vincularReservasPendientes({
-  userId,
-  telefono,
-  email,
-}: {
-  userId: string
-  telefono: string
-  email: string
-}) {
   const supabaseAdmin = createAdminSupabase()
 
   if (!supabaseAdmin) {
     throw new Error(missingSupabaseServiceEnvMessage)
   }
 
+  return { supabase, supabaseAdmin, user }
+}
+
+async function vincularReservasPendientes({
+  supabaseAdmin,
+  userId,
+  telefono,
+  email,
+}: {
+  supabaseAdmin: NonNullable<ReturnType<typeof createAdminSupabase>>
+  userId: string
+  telefono: string
+  email: string
+}) {
   const { data, error } = await supabaseAdmin
     .from('reservas')
     .select('id, telefono, email')
@@ -82,14 +95,11 @@ async function vincularReservasPendientes({
     throw error
   }
 
-  const ids = (data as ReservaPendiente[] | null ?? [])
+  const ids = ((data as ReservaPendiente[] | null) ?? [])
     .filter((reserva) => {
       const mismoTelefono =
-        Boolean(telefono) &&
-        normalizarTelefono(reserva.telefono ?? '') === telefono
-      const mismoEmail =
-        Boolean(email) &&
-        normalizarEmail(reserva.email) === email
+        Boolean(telefono) && normalizarTelefono(reserva.telefono ?? '') === telefono
+      const mismoEmail = Boolean(email) && normalizarEmail(reserva.email) === email
 
       return mismoTelefono || mismoEmail
     })
@@ -109,94 +119,110 @@ async function vincularReservasPendientes({
   return ids.length
 }
 
+async function persistirPerfilCliente({
+  input,
+  requireBasicData,
+}: {
+  input:
+    | Partial<PerfilClienteInput>
+    | FinalizarCuentaInput
+  requireBasicData: boolean
+}) {
+  const { supabaseAdmin, user } = await getAuthenticatedContext()
+  const metadata = user.user_metadata || {}
+  const { data: perfilActual, error: perfilError } = await supabaseAdmin
+    .from('perfiles')
+    .select('nombre, apellido, telefono, fecha_nacimiento, autoriza_imagen')
+    .eq('id', user.id)
+    .maybeSingle<PerfilActual>()
+
+  if (perfilError) {
+    throw perfilError
+  }
+
+  const nombre = normalizarTexto(
+    input.nombre ??
+      perfilActual?.nombre ??
+      metadata.display_name ??
+      metadata.nombre ??
+      ''
+  )
+  const apellido = normalizarTexto(
+    input.apellido ??
+      perfilActual?.apellido ??
+      metadata.last_name ??
+      metadata.apellido ??
+      ''
+  )
+  const telefono = normalizarTelefono(
+    input.telefono ??
+      perfilActual?.telefono ??
+      metadata.telefono ??
+      ''
+  )
+  const fechaNacimiento =
+    'fechaNacimiento' in input
+      ? normalizarTexto(input.fechaNacimiento ?? '') || null
+      : perfilActual?.fecha_nacimiento ?? null
+  const autorizaImagen =
+    'autorizaImagen' in input && typeof input.autorizaImagen === 'boolean'
+      ? input.autorizaImagen
+      : Boolean(perfilActual?.autoriza_imagen)
+
+  if (requireBasicData && (!nombre || !telefono)) {
+    throw new Error(
+      'Necesitamos tu nombre y WhatsApp para crear la cuenta y vincular el turno.'
+    )
+  }
+
+  const { error: upsertError } = await supabaseAdmin.from('perfiles').upsert({
+    id: user.id,
+    nombre: nombre || null,
+    apellido: apellido || null,
+    telefono: telefono || null,
+    fecha_nacimiento: fechaNacimiento,
+    autoriza_imagen: autorizaImagen,
+    updated_at: new Date().toISOString(),
+  })
+
+  if (upsertError) {
+    throw upsertError
+  }
+
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    user_metadata: {
+      ...metadata,
+      display_name: nombre,
+      last_name: apellido,
+      telefono,
+      registro_origen: metadata.registro_origen || 'turnero',
+    },
+  })
+
+  if (authError) {
+    throw authError
+  }
+
+  const linkedCount = await vincularReservasPendientes({
+    supabaseAdmin,
+    userId: user.id,
+    telefono,
+    email: normalizarEmail(user.email),
+  })
+
+  return { linkedCount }
+}
+
 export async function finalizarCuentaClienteAction(
   input: FinalizarCuentaInput = {}
 ): Promise<FinalizarCuentaResult> {
   try {
-    const { user } = await getAuthenticatedUser()
-    const supabaseAdmin = createAdminSupabase()
-
-    if (!supabaseAdmin) {
-      return { success: false, error: missingSupabaseServiceEnvMessage }
-    }
-
-    const metadata = user.user_metadata || {}
-    const { data: perfilActual, error: perfilError } = await supabaseAdmin
-      .from('perfiles')
-      .select('nombre, apellido, telefono')
-      .eq('id', user.id)
-      .maybeSingle<PerfilActual>()
-
-    if (perfilError) {
-      throw perfilError
-    }
-
-    const nombre = normalizarTexto(
-      input.nombre ??
-        perfilActual?.nombre ??
-        metadata.display_name ??
-        metadata.nombre ??
-        ''
-    )
-    const apellido = normalizarTexto(
-      input.apellido ??
-        perfilActual?.apellido ??
-        metadata.last_name ??
-        metadata.apellido ??
-        ''
-    )
-    const telefono = normalizarTelefono(
-      input.telefono ??
-        perfilActual?.telefono ??
-        metadata.telefono ??
-        ''
-    )
-    const email = normalizarEmail(user.email)
-
-    if (!nombre || !telefono) {
-      return {
-        success: false,
-        error:
-          'Necesitamos tu nombre y WhatsApp para crear la cuenta y vincular el turno.',
-      }
-    }
-
-    const { error: upsertError } = await supabaseAdmin.from('perfiles').upsert({
-      id: user.id,
-      nombre,
-      apellido: apellido || null,
-      telefono,
-      updated_at: new Date().toISOString(),
+    const result = await persistirPerfilCliente({
+      input,
+      requireBasicData: true,
     })
 
-    if (upsertError) {
-      throw upsertError
-    }
-
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-      user.id,
-      {
-        user_metadata: {
-          ...metadata,
-          display_name: nombre,
-          last_name: apellido,
-          telefono,
-          registro_origen: metadata.registro_origen || 'turnero',
-        },
-      }
-    )
-
-    if (authError) {
-      throw authError
-    }
-
-    const linkedCount = await vincularReservasPendientes({
-      userId: user.id,
-      telefono,
-      email,
-    })
-
-    return { success: true, linkedCount }
+    return { success: true, linkedCount: result.linkedCount }
   } catch (error) {
     return {
       success: false,
@@ -204,6 +230,56 @@ export async function finalizarCuentaClienteAction(
         error instanceof Error
           ? error.message
           : 'No pudimos terminar de preparar tu cuenta.',
+    }
+  }
+}
+
+export async function actualizarPerfilClienteAction(
+  input: PerfilClienteInput
+): Promise<FinalizarCuentaResult> {
+  try {
+    const result = await persistirPerfilCliente({
+      input,
+      requireBasicData: true,
+    })
+
+    return { success: true, linkedCount: result.linkedCount }
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'No pudimos actualizar tu perfil.',
+    }
+  }
+}
+
+export async function completarPerfilInvitadoAction(
+  input: CompletarPerfilInvitadoInput
+): Promise<FinalizarCuentaResult> {
+  try {
+    const { supabase } = await getAuthenticatedContext()
+
+    const { error: authError } = await supabase.auth.updateUser({
+      password: input.password,
+    })
+
+    if (authError) {
+      throw authError
+    }
+
+    const result = await persistirPerfilCliente({
+      input,
+      requireBasicData: true,
+    })
+
+    return { success: true, linkedCount: result.linkedCount }
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'No pudimos completar tu perfil.',
     }
   }
 }

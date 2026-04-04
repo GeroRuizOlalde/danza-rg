@@ -16,6 +16,7 @@ type AlumnaInput = {
   fechaNacimiento: string
   estado: string
   fechaInicio: string
+  claseId?: string
 }
 
 const ESTADOS_ALUMNA_VALIDOS = new Set(['nueva', 'activa', 'baja'])
@@ -41,6 +42,14 @@ async function getAdminClient() {
   return supabaseAdmin
 }
 
+async function rollbackInvitedUser(supabaseAdmin: Awaited<ReturnType<typeof getAdminClient>>, userId: string) {
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+  if (error && !error.message.toLowerCase().includes('user not found')) {
+    throw error
+  }
+}
+
 export async function invitarAlumnaAction(email: string, nombre: string, apellido: string) {
   try {
     const supabaseAdmin = await getAdminClient()
@@ -58,16 +67,33 @@ export async function invitarAlumnaAction(email: string, nombre: string, apellid
       return { success: false, error: 'No se pudo crear el usuario.' }
     }
 
-    const { error: dbError } = await supabaseAdmin.from('perfiles').insert([{
-      id: data.user.id,
-      nombre,
-      apellido,
-      email,
-      estado: 'nueva'
-    }])
+    const { error: dbError } = await supabaseAdmin.from('perfiles').insert([
+      {
+        id: data.user.id,
+        nombre,
+        apellido,
+        email,
+        estado: 'nueva',
+      },
+    ])
 
     if (dbError) {
-      return { success: false, error: dbError.message }
+      try {
+        await rollbackInvitedUser(supabaseAdmin, data.user.id)
+      } catch (rollbackError) {
+        return {
+          success: false,
+          error: `${dbError.message}. Además falló el rollback del acceso: ${parseError(
+            rollbackError,
+            'No pudimos limpiar el usuario invitado.'
+          )}`,
+        }
+      }
+
+      return {
+        success: false,
+        error: `${dbError.message}. Se revirtió también la invitación para evitar datos desalineados.`,
+      }
     }
 
     return { success: true }
@@ -83,18 +109,20 @@ export async function eliminarAlumnaAction(alumnaId: string) {
   try {
     const supabaseAdmin = await getAdminClient()
 
-    // Borrar perfil (cascadea a alumna_clases)
-    const { error: dbError } = await supabaseAdmin
-      .from('perfiles')
-      .delete()
-      .eq('id', alumnaId)
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(alumnaId)
 
-    if (dbError) {
-      return { success: false, error: dbError.message }
+    if (authError && !authError.message.toLowerCase().includes('user not found')) {
+      return { success: false, error: authError.message }
     }
 
-    // Intentar borrar de auth (puede no existir si se creó manual)
-    await supabaseAdmin.auth.admin.deleteUser(alumnaId).catch(() => {})
+    const { error: dbError } = await supabaseAdmin.from('perfiles').delete().eq('id', alumnaId)
+
+    if (dbError) {
+      return {
+        success: false,
+        error: `${dbError.message}. El acceso ya fue eliminado; reintentá la limpieza del perfil.`,
+      }
+    }
 
     return { success: true }
   } catch (error) {
@@ -109,7 +137,6 @@ export async function cambiarEmailAction(alumnaId: string, nuevoEmail: string) {
   try {
     const supabaseAdmin = await getAdminClient()
 
-    // Actualizar email en auth
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(alumnaId, {
       email: nuevoEmail,
       email_confirm: true,
@@ -119,7 +146,6 @@ export async function cambiarEmailAction(alumnaId: string, nuevoEmail: string) {
       return { success: false, error: authError.message }
     }
 
-    // Actualizar email en perfiles
     const { error: dbError } = await supabaseAdmin
       .from('perfiles')
       .update({ email: nuevoEmail })
@@ -146,6 +172,8 @@ export async function actualizarAlumnaAction(input: AlumnaInput): Promise<Action
     const telefono = normalizarString(input.telefono)
     const email = normalizarString(input.email)
     const estado = ESTADOS_ALUMNA_VALIDOS.has(input.estado) ? input.estado : 'nueva'
+    const fechaInicio = normalizarString(input.fechaInicio)
+    const claseId = normalizarString(input.claseId)
 
     if (!input.id || !nombre || !apellido) {
       return { success: false, error: 'Completá nombre y apellido para guardar la alumna.' }
@@ -178,29 +206,66 @@ export async function actualizarAlumnaAction(input: AlumnaInput): Promise<Action
       return { success: false, error: perfilError.message }
     }
 
-    const fechaInicio = normalizarString(input.fechaInicio)
-
-    if (fechaInicio) {
+    if (fechaInicio || claseId) {
       const { data: inscripcion, error: inscripcionError } = await supabaseAdmin
         .from('alumna_clases')
-        .select('id')
+        .select('id, clase_id')
         .eq('alumna_id', input.id)
         .order('fecha_inicio', { ascending: true })
         .limit(1)
-        .maybeSingle()
+        .maybeSingle<{ id: string; clase_id: string | null }>()
 
       if (inscripcionError) {
         return { success: false, error: inscripcionError.message }
       }
 
       if (inscripcion?.id) {
-        const { error: updateInscripcionError } = await supabaseAdmin
-          .from('alumna_clases')
-          .update({ fecha_inicio: fechaInicio })
-          .eq('id', inscripcion.id)
+        const payload: { fecha_inicio?: string; clase_id?: string } = {}
 
-        if (updateInscripcionError) {
-          return { success: false, error: updateInscripcionError.message }
+        if (fechaInicio) {
+          payload.fecha_inicio = fechaInicio
+        }
+
+        if (claseId && claseId !== inscripcion.clase_id) {
+          payload.clase_id = claseId
+        }
+
+        if (Object.keys(payload).length > 0) {
+          const { error: updateInscripcionError } = await supabaseAdmin
+            .from('alumna_clases')
+            .update(payload)
+            .eq('id', inscripcion.id)
+
+          if (updateInscripcionError) {
+            return { success: false, error: updateInscripcionError.message }
+          }
+        }
+      } else {
+        if (!claseId) {
+          return {
+            success: false,
+            error: 'Seleccioná una clase para poder registrar la fecha de inicio.',
+          }
+        }
+
+        if (!fechaInicio) {
+          return {
+            success: false,
+            error: 'Indicá la fecha de inicio para crear la inscripción principal.',
+          }
+        }
+
+        const { error: createInscripcionError } = await supabaseAdmin.from('alumna_clases').insert([
+          {
+            alumna_id: input.id,
+            clase_id: claseId,
+            fecha_inicio: fechaInicio,
+            estado: estado === 'activa' ? 'activa' : 'prueba',
+          },
+        ])
+
+        if (createInscripcionError) {
+          return { success: false, error: createInscripcionError.message }
         }
       }
     }

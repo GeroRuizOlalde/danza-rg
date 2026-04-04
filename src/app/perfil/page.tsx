@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { finalizarCuentaClienteAction } from "@/app/actions/cuenta";
+import {
+  actualizarPerfilClienteAction,
+  finalizarCuentaClienteAction,
+} from "@/app/actions/cuenta";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 
@@ -97,6 +100,24 @@ export default function PerfilPage() {
 
   const handleUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
+    const result = await actualizarPerfilClienteAction({
+      nombre: formData.nombre,
+      apellido: formData.apellido,
+      telefono: formData.telefono,
+      fechaNacimiento: formData.fecha_nacimiento,
+      autorizaImagen: formData.autoriza_imagen,
+    });
+
+    if (!result.success) {
+      toast.error(result.error || "No pudimos actualizar el perfil.");
+      return;
+    }
+
+    toast.success("Perfil actualizado.");
+    setEditMode(false);
+    await fetchPerfil();
+    return;
+
     const {
       data: { user },
     } = await supabase.auth.getUser();

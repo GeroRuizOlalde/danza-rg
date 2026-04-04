@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { DIAS_SEMANA_ORDENADOS, isDiaAbierto, sanitizeDiasAbiertos } from '@/lib/academia'
 import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
+import { HORARIO_A_COORDINAR, getDiaSemana } from '@/lib/reservas'
 import { createAdminSupabase, requireAdminUser } from '@/lib/supabase-server'
 
 type ActionResult<T = void> =
@@ -182,6 +183,46 @@ async function removeManagedClassImage(
   }
 
   await supabaseAdmin.storage.from('galeria').remove([storagePath]).catch(() => undefined)
+}
+
+async function crearReservaMedianteRpc(
+  supabaseAdmin: Awaited<ReturnType<typeof getAdminContext>>['supabaseAdmin'],
+  input: {
+    nombre: string
+    apellido?: string
+    telefono?: string
+    email?: string
+    disciplina: string
+    fecha: string | null
+    horario: string
+    origen: 'admin' | 'landing' | 'turnero'
+    perfilId?: string | null
+    estado: string
+    validarHorario: boolean
+  }
+) {
+  const dia = input.validarHorario && input.fecha ? getDiaSemana(input.fecha) : null
+
+  const { error } = await supabaseAdmin.rpc('crear_reserva_segura', {
+    p_nombre: input.nombre,
+    p_apellido: input.apellido || null,
+    p_telefono: input.telefono || null,
+    p_email: input.email || null,
+    p_disciplina: input.disciplina,
+    p_fecha: input.fecha,
+    p_horario: input.horario,
+    p_alumno_nombre: null,
+    p_alumno_edad: null,
+    p_origen: input.origen,
+    p_perfil_id: input.perfilId || null,
+    p_dia: dia,
+    p_validar_horario: input.validarHorario,
+    p_estado: input.estado,
+  })
+
+  if (error) {
+    throw error
+  }
 }
 
 export async function actualizarAdminDisplayNameAction(
@@ -592,6 +633,7 @@ export async function crearReservaAdminAction(
     }
 
     const { supabaseAdmin } = await getAdminContext()
+    const validarHorario = horario !== HORARIO_A_COORDINAR
 
     if (perfilId) {
       const { data: perfil, error: perfilError } = await supabaseAdmin
@@ -619,22 +661,30 @@ export async function crearReservaAdminAction(
       telefono = normalizarString(perfil.telefono) || telefono
     }
 
-    const { error } = await supabaseAdmin.from('reservas').insert([
-      {
-        nombre,
-        apellido,
-        telefono,
-        disciplina,
-        fecha,
-        horario,
-        estado,
-        perfil_id: perfilId || null,
-      },
-    ])
+    if (validarHorario) {
+      const diaReserva = getDiaSemana(fecha)
+      const diasAbiertos = await obtenerDiasAbiertosAcademia(supabaseAdmin)
 
-    if (error) {
-      throw error
+      if (!isDiaAbierto(diaReserva, diasAbiertos)) {
+        return {
+          success: false,
+          error: 'Ese día no está habilitado en la configuración de la academia.',
+        }
+      }
     }
+
+    await crearReservaMedianteRpc(supabaseAdmin, {
+      nombre,
+      apellido,
+      telefono,
+      disciplina,
+      fecha,
+      horario,
+      origen: 'admin',
+      perfilId: perfilId || null,
+      estado,
+      validarHorario,
+    })
 
     return { success: true }
   } catch (error) {

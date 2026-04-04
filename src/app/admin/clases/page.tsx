@@ -49,7 +49,6 @@ function ClasePreview({ src, alt }: { src: string; alt: string }) {
       src={imageSrc}
       alt={alt}
       fill
-      unoptimized
       sizes="(max-width: 768px) 100vw, 33vw"
       className="h-full w-full object-cover"
       onError={() =>

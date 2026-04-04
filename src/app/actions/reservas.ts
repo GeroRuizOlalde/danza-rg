@@ -2,16 +2,15 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isDiaAbierto, sanitizeDiasAbiertos } from '@/lib/academia'
-import { missingSupabaseEnvMessage } from '@/lib/supabase-env'
+import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
 import {
-  ESTADOS_RESERVA_ACTIVA,
   HORARIO_A_COORDINAR,
   getDiaSemana,
   getTodayInArgentina,
   normalizarTelefono,
   normalizarTexto,
 } from '@/lib/reservas'
-import { createServerSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
 
 type ReservationActionResult = {
   success: boolean
@@ -37,14 +36,27 @@ type TurneroReservationInput = {
   alumnoEdad?: number | null
 }
 
-type HorarioLookup = {
-  cupo_maximo: number | null
+type CrearReservaRpcInput = {
+  nombre: string
+  apellido?: string
+  telefono: string
+  email?: string
+  disciplina: string
+  fecha: string | null
+  horario: string
+  alumnoNombre?: string
+  alumnoEdad?: number | null
+  origen: 'landing' | 'turnero' | 'admin'
+  perfilId?: string | null
+  dia?: string | null
+  validarHorario: boolean
+  estado?: string
 }
 
-async function obtenerDiasAbiertosAcademia(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+async function obtenerDiasAbiertosAcademia(supabaseAdmin: SupabaseClient) {
+  const { data, error } = await supabaseAdmin
     .from('academia_info')
-    .select('*')
+    .select('dias_abiertos')
     .limit(1)
     .maybeSingle<{ dias_abiertos?: string[] | null }>()
 
@@ -55,54 +67,35 @@ async function obtenerDiasAbiertosAcademia(supabase: SupabaseClient) {
   return sanitizeDiasAbiertos(data?.dias_abiertos)
 }
 
-async function contarReservasActivas(
-  supabase: SupabaseClient,
-  disciplina: string,
-  fecha: string,
-  horario: string
-) {
-  const { count, error } = await supabase
-    .from('reservas')
-    .select('id', { count: 'exact', head: true })
-    .eq('disciplina', disciplina)
-    .eq('fecha', fecha)
-    .eq('horario', horario)
-    .in('estado', [...ESTADOS_RESERVA_ACTIVA])
+async function crearReservaAtomica(input: CrearReservaRpcInput): Promise<ReservationActionResult> {
+  const supabaseAdmin = createAdminSupabase()
+
+  if (!supabaseAdmin) {
+    return { success: false, error: missingSupabaseServiceEnvMessage }
+  }
+
+  const { error } = await supabaseAdmin.rpc('crear_reserva_segura', {
+    p_nombre: input.nombre,
+    p_apellido: input.apellido || null,
+    p_telefono: input.telefono || null,
+    p_email: input.email || null,
+    p_disciplina: input.disciplina,
+    p_fecha: input.fecha,
+    p_horario: input.horario,
+    p_alumno_nombre: input.alumnoNombre || null,
+    p_alumno_edad: input.alumnoEdad ?? null,
+    p_origen: input.origen,
+    p_perfil_id: input.perfilId || null,
+    p_dia: input.dia || null,
+    p_validar_horario: input.validarHorario,
+    p_estado: input.estado || 'pendiente',
+  })
 
   if (error) {
     throw error
   }
 
-  return count ?? 0
-}
-
-async function obtenerHorarioTurnero(
-  supabase: SupabaseClient,
-  disciplina: string,
-  fecha: string,
-  horario: string
-) {
-  const dia = getDiaSemana(fecha)
-  const hora = Number.parseInt(horario.split(':')[0] ?? '', 10)
-
-  if (Number.isNaN(hora)) {
-    return null
-  }
-
-  const { data, error } = await supabase
-    .from('horarios')
-    .select('cupo_maximo, clases!inner(nombre)')
-    .eq('dia', dia)
-    .eq('hora', hora)
-    .eq('clases.nombre', disciplina)
-    .limit(1)
-    .maybeSingle<HorarioLookup>()
-
-  if (error) {
-    throw error
-  }
-
-  return data
+  return { success: true }
 }
 
 async function crearReservaSegura({
@@ -122,21 +115,22 @@ async function crearReservaSegura({
   telefono: string
   email?: string
   disciplina: string
-  fecha: string
+  fecha: string | null
   horario: string
   alumnoNombre?: string
   alumnoEdad?: number | null
   origen: 'landing' | 'turnero'
 }): Promise<ReservationActionResult> {
-  const supabase = await createServerSupabase()
+  const supabaseAdmin = createAdminSupabase()
 
-  if (!supabase) {
-    return { success: false, error: missingSupabaseEnvMessage }
+  if (!supabaseAdmin) {
+    return { success: false, error: missingSupabaseServiceEnvMessage }
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const sessionSupabase = await createServerSupabase()
+  const user = sessionSupabase
+    ? (await sessionSupabase.auth.getUser()).data.user ?? null
+    : null
 
   let nombreLimpio = normalizarTexto(nombre)
   const apellidoLimpio = normalizarTexto(apellido ?? '')
@@ -154,96 +148,41 @@ async function crearReservaSegura({
     return { success: false, error: 'Completá los datos obligatorios antes de continuar.' }
   }
 
-  if (origen === 'turnero' && horarioLimpio !== HORARIO_A_COORDINAR) {
-    if (!fecha) {
+  const validarHorario = origen === 'turnero' && horarioLimpio !== HORARIO_A_COORDINAR
+  const fechaLimpia = validarHorario ? fecha : null
+  const diaReserva = validarHorario && fechaLimpia ? getDiaSemana(fechaLimpia) : null
+
+  if (validarHorario) {
+    if (!fechaLimpia || !diaReserva) {
       return { success: false, error: 'Seleccioná una fecha para la reserva.' }
     }
 
-    const diaReserva = getDiaSemana(fecha)
-    const diasAbiertos = await obtenerDiasAbiertosAcademia(supabase)
+    const diasAbiertos = await obtenerDiasAbiertosAcademia(supabaseAdmin)
 
     if (!isDiaAbierto(diaReserva, diasAbiertos)) {
       return {
         success: false,
-        error: 'La academia no recibe reservas para ese dia.',
-      }
-    }
-
-    const horarioExistente = await obtenerHorarioTurnero(
-      supabase,
-      disciplinaLimpia,
-      fecha,
-      horarioLimpio
-    )
-
-    if (!horarioExistente) {
-      return {
-        success: false,
-        error: 'Ese horario ya no esta disponible. Elegi otro para continuar.',
-      }
-    }
-
-    const reservados = await contarReservasActivas(
-      supabase,
-      disciplinaLimpia,
-      fecha,
-      horarioLimpio
-    )
-
-    const cupoDisponible = horarioExistente.cupo_maximo || 20
-
-    if (reservados >= cupoDisponible) {
-      return {
-        success: false,
-        error: 'Ese horario ya se quedó sin cupo. Elegí otro para continuar.',
+        error: 'La academia no recibe reservas para ese día.',
       }
     }
   }
 
-  const { data: reservaExistente, error: existingError } = await supabase
-    .from('reservas')
-    .select('id')
-    .eq('fecha', fecha)
-    .eq('horario', horarioLimpio)
-    .eq('disciplina', disciplinaLimpia)
-    .eq('telefono', telefonoLimpio)
-    .in('estado', [...ESTADOS_RESERVA_ACTIVA])
-    .limit(1)
-    .maybeSingle()
-
-  if (existingError) {
-    throw existingError
-  }
-
-  if (reservaExistente) {
-    return {
-      success: false,
-      error: 'Ya existe una reserva activa con ese teléfono para ese horario.',
-    }
-  }
-
-  const { error } = await supabase.from('reservas').insert([
-    {
-      nombre: nombreLimpio,
-      apellido: apellidoLimpio || null,
-      telefono: telefonoLimpio,
-      email: emailLimpio || null,
-      disciplina: disciplinaLimpia,
-      fecha,
-      horario: horarioLimpio,
-      alumno_nombre: alumnoNombreLimpio || null,
-      alumno_edad: alumnoEdad ?? null,
-      estado: 'pendiente',
-      origen,
-      perfil_id: user?.id ?? null,
-    },
-  ])
-
-  if (error) {
-    throw error
-  }
-
-  return { success: true }
+  return crearReservaAtomica({
+    nombre: nombreLimpio,
+    apellido: apellidoLimpio || undefined,
+    telefono: telefonoLimpio,
+    email: emailLimpio || undefined,
+    disciplina: disciplinaLimpia,
+    fecha: fechaLimpia,
+    horario: horarioLimpio,
+    alumnoNombre: alumnoNombreLimpio || undefined,
+    alumnoEdad: alumnoEdad ?? null,
+    origen,
+    perfilId: user?.id ?? null,
+    dia: diaReserva,
+    validarHorario,
+    estado: 'pendiente',
+  })
 }
 
 export async function crearReservaLandingAction(
@@ -255,7 +194,7 @@ export async function crearReservaLandingAction(
       apellido: input.apellido,
       telefono: input.telefono,
       disciplina: input.disciplina || 'Asesoramiento',
-      fecha: getTodayInArgentina(),
+      fecha: null,
       horario: HORARIO_A_COORDINAR,
       origen: 'landing',
     })

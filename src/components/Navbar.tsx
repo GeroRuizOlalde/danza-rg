@@ -5,19 +5,20 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { useAcademiaInfo } from './AcademiaInfoProvider'
 
 const navLinks = [
-  { href: '/#nosotros', label: 'Quienes somos' },
+  { href: '/#nosotros', label: 'Quiénes somos' },
   { href: '/clases', label: 'Clases' },
   { href: '/#horarios', label: 'Horarios' },
-  { href: '/#galeria', label: 'Galeria' },
+  { href: '/#galeria', label: 'Galería' },
 ]
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
-  const [nombreAcademia, setNombreAcademia] = useState('R.G Danza')
+  const { nombre: nombreAcademia } = useAcademiaInfo()
 
   const pathname = usePathname()
   const router = useRouter()
@@ -30,17 +31,11 @@ export default function Navbar() {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll)
 
-    async function fetchNombre() {
-      const { data } = await supabase.from('academia_info').select('nombre').single()
-      if (data?.nombre) setNombreAcademia(data.nombre)
-    }
-
     async function fetchUser() {
       const { data } = await supabase.auth.getUser()
       setUser(data.user ?? null)
     }
 
-    void fetchNombre()
     void fetchUser()
 
     const {
@@ -154,11 +149,11 @@ export default function Navbar() {
 
       <button
         onClick={() => setMenuOpen((prev) => !prev)}
-        aria-label={menuOpen ? 'Cerrar menu' : 'Abrir menu'}
+        aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
         aria-expanded={menuOpen}
         className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#E8A0B4]/25 bg-white/80 p-0 text-[#1A1A22] shadow-sm transition-colors hover:border-[#C97A96] hover:text-[#C97A96] md:hidden"
       >
-        <span className="sr-only">{menuOpen ? 'Cerrar menu' : 'Abrir menu'}</span>
+        <span className="sr-only">{menuOpen ? 'Cerrar menú' : 'Abrir menú'}</span>
         <span className="relative h-4 w-5">
           <span
             className={`absolute left-0 top-0 h-0.5 w-5 rounded-full bg-current transition-transform duration-300 ${
@@ -186,7 +181,7 @@ export default function Navbar() {
         <div className="mx-auto flex h-full max-w-[520px] flex-col overflow-y-auto px-5 pb-8 pt-5">
           <div className="mb-5 rounded-[28px] border border-[#E8A0B4]/20 bg-white px-5 py-5 shadow-[0_12px_32px_rgba(26,26,34,0.08)]">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[2px] text-[#C97A96]">
-              Navegacion
+              Navegación
             </p>
             <div className="mt-2 font-playfair text-[2rem] font-bold leading-none text-[#1A1A22]">
               {renderLogo()}
@@ -235,7 +230,7 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500 transition-colors hover:bg-red-100"
                 >
-                  Cerrar sesion
+                  Cerrar sesión
                 </button>
               </div>
             ) : (
@@ -244,7 +239,7 @@ export default function Navbar() {
                 onClick={closeMenu}
                 className="block rounded-2xl border border-[#E8A0B4]/20 bg-white px-4 py-3 text-center text-sm font-semibold text-[#4A4A55] no-underline transition-colors hover:border-[#C97A96] hover:text-[#C97A96]"
               >
-                Iniciar sesion
+                Iniciar sesión
               </Link>
             )}
           </div>

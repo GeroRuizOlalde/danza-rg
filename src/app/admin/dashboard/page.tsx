@@ -56,6 +56,7 @@ type ReservaDashboard = {
   horario: string;
   disciplina: string;
   estado: string;
+  origen?: string | null;
   created_at?: string | null;
 };
 
@@ -104,6 +105,7 @@ export default function DashboardPage() {
 
         const perfiles: PerfilDashboard[] = resPerfiles.data || [];
         const reservas: ReservaDashboard[] = resReservas.data || [];
+        const reservasOperativas = reservas.filter((r) => r.origen !== 'landing');
         const diasAbiertos = sanitizeDiasAbiertos(resAcademia.data?.dias_abiertos);
 
         // Cumpleaños
@@ -135,14 +137,14 @@ export default function DashboardPage() {
         setMetricas({
           activas: perfiles.filter((p) => p.estado === 'activa').length,
           nuevas: perfiles.filter((p) => p.estado === 'nueva' || !p.estado).length,
-          turnosPendientes: reservas.filter((r) => r.estado === 'pendiente').length,
-          turnosTotal: reservas.length,
+          turnosPendientes: reservasOperativas.filter((r) => r.estado === 'pendiente').length,
+          turnosTotal: reservasOperativas.length,
           clasesHoy: isDiaAbierto(nombreDiaHoy, diasAbiertos) ? resHorarios.data?.length || 0 : 0,
         });
 
         // Próximos turnos
         setProximosTurnos(
-          reservas
+          reservasOperativas
             .filter((r) => r.estado !== 'cancelado' && Boolean(r.fecha) && (r.fecha as string) >= hoyIso && !isArchivedTurno(r.fecha, hoyIso))
             .sort((a, b) => new Date(a.fecha || '').getTime() - new Date(b.fecha || '').getTime())
             .slice(0, 3)

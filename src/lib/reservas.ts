@@ -60,9 +60,5 @@ export function buildReservationKey({
   fecha: string
   horario: string
 }) {
-  return [
-    normalizarTexto(disciplina).toLowerCase(),
-    fecha,
-    horario,
-  ].join('|')
+  return [normalizarTexto(disciplina).toLowerCase(), fecha, horario].join('|')
 }

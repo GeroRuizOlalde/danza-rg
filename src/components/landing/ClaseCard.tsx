@@ -18,7 +18,6 @@ export default function ClaseCard({
         src={imageSrc}
         alt={clase.nombre}
         fill
-        unoptimized
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         className="w-full h-full object-cover block"
         onError={() => setImageSrc(FALLBACK)}

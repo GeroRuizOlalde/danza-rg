@@ -40,7 +40,6 @@ function ClaseImagen({ src, alt }: { src: string; alt: string }) {
       src={imageSrc}
       alt={alt}
       fill
-      unoptimized
       sizes="(max-width: 768px) 100vw, 380px"
       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       onError={() => setImageSrc(FALLBACK)}

@@ -3,6 +3,8 @@ import { Playfair_Display, DM_Sans } from 'next/font/google'
 import './globals.css'
 import ToasterProvider from '@/components/ToasterProvider'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import { AcademiaInfoProvider } from '@/components/AcademiaInfoProvider'
+import { getAcademiaInfoPublic } from '@/lib/academia-info'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -20,9 +22,9 @@ const dmSans = DM_Sans({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://rgdanza.com'
 
 export const metadata: Metadata = {
-  title: 'R.G Danza - Academia de Danza en Cordoba',
+  title: 'R.G Danza - Academia de Danza en Córdoba',
   description:
-    'Academia de danza en Cordoba. Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas. Clases para todas las edades y niveles. Rio Negro 4450, Zona Sur.',
+    'Academia de danza en Córdoba. Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más. Clases para todas las edades y niveles. Río Negro 4450, Zona Sur.',
   keywords: [
     'academia de danza',
     'danza cordoba',
@@ -36,27 +38,27 @@ export const metadata: Metadata = {
   ],
   metadataBase: new URL(SITE_URL),
   openGraph: {
-    title: 'R.G Danza - Academia de Danza en Cordoba',
+    title: 'R.G Danza - Academia de Danza en Córdoba',
     description:
-      'Academia de danza en Cordoba. Clases para todas las edades y niveles. Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas.',
+      'Academia de danza en Córdoba. Clases para todas las edades y niveles. Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más.',
     siteName: 'R.G Danza',
     locale: 'es_AR',
     type: 'website',
     url: SITE_URL,
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'R.G Danza - Academia de Danza en Cordoba',
+        alt: 'R.G Danza - Academia de Danza en Córdoba',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'R.G Danza - Academia de Danza en Cordoba',
-    description: 'Academia de danza en Cordoba. Clases para todas las edades y niveles.',
-    images: ['/og-image.jpg'],
+    title: 'R.G Danza - Academia de Danza en Córdoba',
+    description: 'Academia de danza en Córdoba. Clases para todas las edades y niveles.',
+    images: ['/opengraph-image'],
   },
 }
 
@@ -65,14 +67,14 @@ const jsonLd = {
   '@type': 'DanceSchool',
   name: 'R.G Danza',
   description:
-    'Academia de danza en Cordoba. Clases de Ballet, Jazz, Contemporaneo, Acro Tela, Reggaeton y mas para todas las edades.',
+    'Academia de danza en Córdoba. Clases de Ballet, Jazz, Contemporáneo, Acro Tela, Reggaetón y más para todas las edades.',
   url: SITE_URL,
   telephone: '+5493516793151',
   address: {
     '@type': 'PostalAddress',
-    streetAddress: 'Rio Negro 4450',
-    addressLocality: 'Cordoba',
-    addressRegion: 'Cordoba',
+    streetAddress: 'Río Negro 4450',
+    addressLocality: 'Córdoba',
+    addressRegion: 'Córdoba',
     addressCountry: 'AR',
   },
   geo: {
@@ -89,7 +91,9 @@ const jsonLd = {
   sameAs: ['https://www.instagram.com/r.g_danza/'],
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const academiaInfo = await getAcademiaInfoPublic()
+
   return (
     <html lang="es" className={`${playfair.variable} ${dmSans.variable}`}>
       <head>
@@ -99,9 +103,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {children}
-        <ToasterProvider />
-        <WhatsAppButton />
+        <AcademiaInfoProvider value={academiaInfo}>
+          {children}
+          <ToasterProvider />
+          <WhatsAppButton />
+        </AcademiaInfoProvider>
       </body>
     </html>
   )
