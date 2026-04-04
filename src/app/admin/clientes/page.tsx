@@ -198,13 +198,19 @@ export default function ClientesPage() {
   const abrirModalEdicion = async (alumna: Alumna, e?: React.MouseEvent) => {
     e?.stopPropagation();
     // Buscar fecha_inicio en alumna_clases
-    const { data: inscripcion } = await supabase
+    const { data: inscripcion, error: inscripcionError } = await supabase
       .from("alumna_clases")
       .select("fecha_inicio")
       .eq("alumna_id", alumna.id)
       .order("fecha_inicio", { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (inscripcionError) {
+      console.error("Error cargando fecha_inicio de alumna_clases:", inscripcionError);
+      toast.error("No pudimos cargar la inscripción de esta alumna.");
+      return;
+    }
 
     setEditForm({
       id: alumna.id,

@@ -43,7 +43,10 @@ const MESES = [
 const DIAS_CORTO = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
 function hoyISO() {
-  return new Date().toISOString().split("T")[0];
+  const hoy = new Date();
+  return new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
+    .toISOString()
+    .split("T")[0];
 }
 
 function iniciales(p: Profesor) {
@@ -96,13 +99,15 @@ export default function ProfesoresPage() {
     const desde = `${anioFiltro}-${String(mesFiltro + 1).padStart(2,"0")}-01`;
     const diasMes = new Date(anioFiltro, mesFiltro + 1, 0).getDate();
     const hasta = `${anioFiltro}-${String(mesFiltro + 1).padStart(2,"0")}-${diasMes}`;
+    const desdeConsulta = hoyStrActual < desde ? hoyStrActual : desde;
+    const hastaConsulta = hoyStrActual > hasta ? hoyStrActual : hasta;
 
     // También traemos el día de hoy si no está en ese rango
     const { data, error: err } = await supabase
       .from("asistencia_profesores")
       .select("*")
-      .gte("fecha", hoyStrActual < desde ? hoyStrActual : desde)
-      .lte("fecha", hasta);
+      .gte("fecha", desdeConsulta)
+      .lte("fecha", hastaConsulta);
     if (err) throw new Error(err.message);
     setAsistencias(data ?? []);
   }, [mesFiltro, anioFiltro, hoyStrActual]);

@@ -69,7 +69,50 @@ BEGIN
   END IF;
 END $$;
 
--- 5. COLUMNA mes_periodo en pagos (formato YYYY-MM para queries confiables)
+-- 5. COLUMNAS faltantes en pagos para el admin actual
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'alumna_id'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN alumna_id UUID REFERENCES perfiles(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_pagos_alumna ON pagos(alumna_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'mes_correspondiente'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN mes_correspondiente VARCHAR(50);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'estado'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'pagado';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'nota'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN nota TEXT;
+  END IF;
+END $$;
+
+UPDATE pagos
+SET estado = 'pagado'
+WHERE estado IS NULL;
+
+UPDATE pagos
+SET mes_correspondiente =
+  EXTRACT(YEAR FROM fecha_pago)::TEXT || '-' ||
+  LPAD(EXTRACT(MONTH FROM fecha_pago)::INT::TEXT, 2, '0')
+WHERE mes_correspondiente IS NULL;
+
+-- 6. COLUMNA mes_periodo en pagos (formato YYYY-MM para queries confiables)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -85,7 +128,7 @@ BEGIN
   END IF;
 END $$;
 
--- 6. TABLA profesores
+-- 7. TABLA profesores
 CREATE TABLE IF NOT EXISTS profesores (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
@@ -112,7 +155,7 @@ CREATE POLICY "Admin full access profesores" ON profesores
     )
   );
 
--- 7. TABLA asistencia_profesores
+-- 8. TABLA asistencia_profesores
 CREATE TABLE IF NOT EXISTS asistencia_profesores (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   profesor_id UUID NOT NULL REFERENCES profesores(id) ON DELETE CASCADE,
@@ -153,7 +196,28 @@ BEGIN
   END IF;
 END $$;
 
--- 8. COLUMNA origen en reservas (para distinguir landing vs turnero)
+DO $$
+BEGIN
+  IF to_regclass('public.asistencia_profesores') IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conrelid = 'public.asistencia_profesores'::regclass
+        AND contype = 'u'
+        AND conname = 'asistencia_profesores_profesor_id_fecha_key'
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM asistencia_profesores
+      GROUP BY profesor_id, fecha
+      HAVING COUNT(*) > 1
+    ) THEN
+    ALTER TABLE asistencia_profesores
+      ADD CONSTRAINT asistencia_profesores_profesor_id_fecha_key UNIQUE (profesor_id, fecha);
+  END IF;
+END $$;
+
+-- 9. COLUMNA origen en reservas (para distinguir landing vs turnero)
 DO $$
 BEGIN
   IF NOT EXISTS (

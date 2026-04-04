@@ -32,10 +32,13 @@ const FILTROS = [
   "Hoy",
   "Esta semana",
   "Pasados",
+  "Archivados",
   "Pendientes",
   "Confirmados",
   "Cancelados",
 ];
+
+const ARCHIVE_AFTER_DAYS = 30;
 
 const HORAS = [
   "17:00",
@@ -94,6 +97,16 @@ function esEstaSemana(fecha: string, hoyIso: string) {
   const diffTime = fechaTurno.getTime() - hoy.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return diffDays >= 0 && diffDays <= 7;
+}
+
+function getDiffDays(fecha: string, hoyIso: string) {
+  const hoy = new Date(`${hoyIso}T00:00:00`);
+  const fechaTurno = new Date(`${fecha}T00:00:00`);
+  return Math.floor((fechaTurno.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function isArchivedTurno(fecha: string, hoyIso: string) {
+  return getDiffDays(fecha, hoyIso) <= -ARCHIVE_AFTER_DAYS;
 }
 
 export default function TurnosPage() {
@@ -217,10 +230,22 @@ export default function TurnosPage() {
     }
   };
 
+  const turnosArchivados = useMemo(
+    () => turnos.filter((turno) => isArchivedTurno(turno.fecha, hoyIso)),
+    [hoyIso, turnos]
+  );
+
+  const turnosOperativos = useMemo(
+    () => turnos.filter((turno) => !isArchivedTurno(turno.fecha, hoyIso)),
+    [hoyIso, turnos]
+  );
+
   const turnosFiltrados = useMemo(() => {
-    const filtrados = turnos.filter((turno) => {
+    const base = filtroActivo === "Archivados" ? turnosArchivados : turnosOperativos;
+    const filtrados = base.filter((turno) => {
       if (filtroActivo === "Todos") return turno.fecha >= hoyIso;
       if (filtroActivo === "Pasados") return turno.fecha < hoyIso;
+      if (filtroActivo === "Archivados") return true;
       if (filtroActivo === "Pendientes") return turno.estado === "pendiente";
       if (filtroActivo === "Confirmados") return turno.estado === "confirmado";
       if (filtroActivo === "Cancelados") return turno.estado === "cancelado";
@@ -233,12 +258,16 @@ export default function TurnosPage() {
       return filtrados.sort(compareTurnosDesc);
     }
 
+    if (filtroActivo === "Archivados") {
+      return filtrados.sort(compareTurnosDesc);
+    }
+
     if (filtroActivo === "Todos" || filtroActivo === "Hoy" || filtroActivo === "Esta semana") {
       return filtrados.sort(compareTurnosAsc);
     }
 
     return filtrados.sort((a, b) => compareTurnosPorProximidad(a, b, hoyIso));
-  }, [filtroActivo, hoyIso, turnos]);
+  }, [filtroActivo, hoyIso, turnosArchivados, turnosOperativos]);
 
   return (
     <div>
@@ -264,19 +293,19 @@ export default function TurnosPage() {
         {[
           {
             label: "Pendientes",
-            count: turnos.filter((turno) => turno.estado === "pendiente").length,
+            count: turnosOperativos.filter((turno) => turno.estado === "pendiente").length,
             color: "text-[#F59E0B]",
             bg: "bg-[#FFF8E7]",
           },
           {
             label: "Confirmados",
-            count: turnos.filter((turno) => turno.estado === "confirmado").length,
+            count: turnosOperativos.filter((turno) => turno.estado === "confirmado").length,
             color: "text-[#2DB87A]",
             bg: "bg-green-50",
           },
           {
-            label: "Total",
-            count: turnos.length,
+            label: "Archivados",
+            count: turnosArchivados.length,
             color: "text-[#C97A96]",
             bg: "bg-[#FDF0F4]",
           },
@@ -309,6 +338,10 @@ export default function TurnosPage() {
           </button>
         ))}
       </div>
+
+      <p className="text-[0.74rem] text-[#8A8A99] mb-6">
+        Los turnos con más de {ARCHIVE_AFTER_DAYS} días de antigüedad pasan a <strong>Archivados</strong> automáticamente.
+      </p>
 
       <div className="bg-white border border-[#E8A0B4]/20 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto min-h-[300px]">

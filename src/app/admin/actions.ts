@@ -89,7 +89,18 @@ const ESTADOS_CLASE_VALIDOS = new Set(['activa', 'inactiva'])
 const DIAS_VALIDOS = new Set(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'])
 
 function parseError(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) {
+      return message
+    }
+  }
+
+  return fallback
 }
 
 async function getAdminContext() {
@@ -457,6 +468,10 @@ export async function crearPagoAdminAction(
     const mesCorrespondiente = normalizarString(input.mesCorrespondiente)
     const metodoPago = normalizarString(input.metodoPago)
     const monto = Number.isFinite(input.monto) ? input.monto : Number.NaN
+    const fechaPagoDate = new Date(`${fechaPago}T12:00:00`)
+    const mesPeriodo = Number.isNaN(fechaPagoDate.getTime())
+      ? null
+      : `${fechaPagoDate.getFullYear()}-${String(fechaPagoDate.getMonth() + 1).padStart(2, '0')}`
 
     if (!alumnaId || !fechaPago || !mesCorrespondiente || !metodoPago || Number.isNaN(monto) || monto <= 0) {
       return { success: false, error: 'Revisá los datos del pago antes de guardar.' }
@@ -490,6 +505,7 @@ export async function crearPagoAdminAction(
         monto,
         fecha_pago: fechaPago,
         mes_correspondiente: mesCorrespondiente,
+        mes_periodo: mesPeriodo,
         metodo_pago: metodoPago,
         nota: normalizarString(input.nota) || null,
         estado: 'pagado',
@@ -502,9 +518,13 @@ export async function crearPagoAdminAction(
 
     return { success: true }
   } catch (error) {
+    const message = parseError(error, 'No pudimos registrar el pago.')
+
     return {
       success: false,
-      error: parseError(error, 'No pudimos registrar el pago.'),
+      error: message.includes('schema cache')
+        ? `${message}. Te falta ejecutar la migración de pagos en Supabase.`
+        : message,
     }
   }
 }
@@ -594,25 +614,56 @@ export async function marcarAsistenciaProfesorAdminAction(
     }
 
     const { supabaseAdmin } = await getAdminContext()
-    const { data, error } = await supabaseAdmin
+    const { data: existente, error: existingError } = await supabaseAdmin
       .from('asistencia_profesores')
-      .upsert(
-        [
+      .select('id')
+      .eq('profesor_id', profesorId)
+      .eq('fecha', fecha)
+      .limit(1)
+      .maybeSingle<{ id: string }>()
+
+    if (existingError) {
+      throw existingError
+    }
+
+    let data: AsistenciaRecord | null = null
+    let error: unknown = null
+
+    if (existente?.id) {
+      const result = await supabaseAdmin
+        .from('asistencia_profesores')
+        .update({
+          presente: input.presente,
+        })
+        .eq('id', existente.id)
+        .select('id, profesor_id, fecha, presente, nota')
+        .single<AsistenciaRecord>()
+
+      data = result.data
+      error = result.error
+    } else {
+      const result = await supabaseAdmin
+        .from('asistencia_profesores')
+        .insert([
           {
             profesor_id: profesorId,
             fecha,
             presente: input.presente,
           },
-        ],
-        {
-          onConflict: 'profesor_id,fecha',
-        }
-      )
-      .select('id, profesor_id, fecha, presente, nota')
-      .single<AsistenciaRecord>()
+        ])
+        .select('id, profesor_id, fecha, presente, nota')
+        .single<AsistenciaRecord>()
+
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       throw error
+    }
+
+    if (!data) {
+      throw new Error('No recibimos el registro de asistencia actualizado.')
     }
 
     return { success: true, data }

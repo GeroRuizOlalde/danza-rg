@@ -7,6 +7,22 @@ import toast from "react-hot-toast";
 import { actualizarAdminDisplayNameAction } from "../actions";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const TURNOS_ARCHIVE_AFTER_DAYS = 30;
+
+function getTodayIso() {
+  const hoy = new Date();
+  return new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
+    .toISOString()
+    .split("T")[0];
+}
+
+function isArchivedTurno(fecha: string | null, hoyIso: string) {
+  if (!fecha) return false;
+  const hoy = new Date(`${hoyIso}T00:00:00`);
+  const fechaTurno = new Date(`${fecha}T00:00:00`);
+  const diffDays = Math.floor((fechaTurno.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+  return diffDays <= -TURNOS_ARCHIVE_AFTER_DAYS;
+}
 
 type ActividadItem = {
   id: string;
@@ -56,6 +72,7 @@ export default function DashboardPage() {
   const [guardandoNombre, setGuardandoNombre] = useState(false);
 
   const fechaHoy = new Date();
+  const hoyIso = getTodayIso();
   const fechaHoyStr = new Intl.DateTimeFormat('es-AR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   }).format(fechaHoy);
@@ -123,7 +140,7 @@ export default function DashboardPage() {
         // Próximos turnos
         setProximosTurnos(
           reservas
-            .filter((r) => r.estado !== 'cancelado')
+            .filter((r) => r.estado !== 'cancelado' && Boolean(r.fecha) && (r.fecha as string) >= hoyIso && !isArchivedTurno(r.fecha, hoyIso))
             .sort((a, b) => new Date(a.fecha || '').getTime() - new Date(b.fecha || '').getTime())
             .slice(0, 3)
         );
@@ -160,7 +177,7 @@ export default function DashboardPage() {
       }
     }
     fetchDashboardData();
-  }, [nombreDiaHoy]);
+  }, [hoyIso, nombreDiaHoy]);
 
   const handleGuardarNombre = async () => {
     if (!tempName.trim()) return;
