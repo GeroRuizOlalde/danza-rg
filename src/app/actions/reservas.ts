@@ -147,6 +147,17 @@ async function crearReservaSegura({
     ? (await sessionSupabase.auth.getUser()).data.user ?? null
     : null
 
+  let perfilExiste = false
+  if (user && supabaseAdmin) {
+    const { data: perfil } = await supabaseAdmin
+      .from('perfiles')
+      .select('id')
+      .eq('id', user.id)
+      .limit(1)
+      .maybeSingle()
+    perfilExiste = !!perfil
+  }
+
   let nombreLimpio = normalizarTexto(nombre)
   const apellidoLimpio = normalizarTexto(apellido ?? '')
   const telefonoLimpio = normalizarTelefono(telefono)
@@ -193,7 +204,7 @@ async function crearReservaSegura({
     alumnoNombre: alumnoNombreLimpio || undefined,
     alumnoEdad: alumnoEdad ?? null,
     origen,
-    perfilId: user?.id ?? null,
+    perfilId: perfilExiste ? (user?.id ?? null) : null,
     dia: diaReserva,
     validarHorario,
     estado: 'pendiente',
