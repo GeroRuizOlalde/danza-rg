@@ -69,22 +69,6 @@ BEGIN
   END IF;
 END $$;
 
--- 4.b COLUMNA dias_abiertos en academia_info
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'academia_info' AND column_name = 'dias_abiertos'
-  ) THEN
-    ALTER TABLE academia_info
-      ADD COLUMN dias_abiertos TEXT[] DEFAULT ARRAY['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-  END IF;
-END $$;
-
-UPDATE academia_info
-SET dias_abiertos = ARRAY['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
-WHERE dias_abiertos IS NULL OR array_length(dias_abiertos, 1) IS NULL;
-
 -- 5. COLUMNAS faltantes en pagos para el admin actual
 DO $$
 BEGIN

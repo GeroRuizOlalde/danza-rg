@@ -119,6 +119,7 @@ export default function TurneroPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [clases, setClases] = useState<ClaseDB[]>([]);
   const [horarios, setHorarios] = useState<HorarioDB[]>([]);
   const [telefonoAcademia, setTelefonoAcademia] = useState("");
@@ -152,6 +153,8 @@ export default function TurneroPage() {
 
         if (auth.user) {
           setIsAuthenticated(true);
+          const role = auth.user.app_metadata?.role || auth.user.user_metadata?.role;
+          setIsAdminUser(role === "admin");
           const { data: perfil } = await supabase.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
           if (perfil) {
             setFormData((prev) => ({
@@ -199,6 +202,15 @@ export default function TurneroPage() {
   }, [searchParams]);
 
   const esAsesoramiento = formData.disciplina === DISCIPLINA_ASESORAMIENTO;
+  const edadAlumna = formData.alumnoEdad ? Number.parseInt(formData.alumnoEdad, 10) : formData.userAge;
+  const esMayorDeEdad = typeof edadAlumna === "number" && edadAlumna >= 18;
+  const nombreContacto = formData.nombre.trim() || (esMayorDeEdad ? formData.alumnoNombre.trim() : "");
+  const apellidoContacto = formData.apellido.trim();
+  const puedeAvanzarDatos =
+    Boolean(formData.telefono.trim()) &&
+    Boolean(formData.alumnoNombre.trim()) &&
+    Boolean(formData.alumnoEdad.trim()) &&
+    (esMayorDeEdad || Boolean(formData.nombre.trim()));
   const hoy = new Date();
   const fechaBase = useMemo(() => {
     const ahora = new Date();
@@ -267,15 +279,15 @@ export default function TurneroPage() {
     setIsSubmitting(true);
     try {
       const result = await crearReservaTurneroAction({
-        nombre: formData.nombre,
-        apellido: formData.apellido,
+        nombre: nombreContacto,
+        apellido: apellidoContacto,
         telefono: formData.telefono,
         email: formData.email,
         disciplina: formData.disciplina,
         fecha: formData.fecha ? formatDateForDb(formData.fecha) : null,
         horario: esAsesoramiento ? HORARIO_A_COORDINAR : formData.horario,
         alumnoNombre: formData.alumnoNombre,
-        alumnoEdad: formData.alumnoEdad ? Number.parseInt(formData.alumnoEdad, 10) : formData.userAge || null,
+        alumnoEdad: edadAlumna || null,
       });
       if (!result.success) throw new Error(result.error || "No pudimos guardar la reserva.");
       setStep(5);
@@ -294,16 +306,16 @@ export default function TurneroPage() {
 
   const mensajeWA = encodeURIComponent(
     esAsesoramiento
-      ? `¡Hola! 👋 Quiero coordinar una clase de prueba y necesito orientación.\n\nSoy ${formData.nombre} ${formData.apellido}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\n¡Gracias!`
-      : `¡Hola! 👋 Acabo de reservar una clase de prueba de ${formData.disciplina} para el ${fechaFormateada} a las ${formData.horario} hs.\n\nSoy ${formData.nombre} ${formData.apellido}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\n¡Gracias!`
+      ? `¡Hola! 👋 Quiero coordinar una clase de prueba y necesito orientación.\n\nSoy ${[nombreContacto, apellidoContacto].filter(Boolean).join(" ") || formData.alumnoNombre}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\n¡Gracias!`
+      : `¡Hola! 👋 Acabo de solicitar una clase de prueba de ${formData.disciplina} para el ${fechaFormateada} a las ${formData.horario} hs.\n\nSoy ${[nombreContacto, apellidoContacto].filter(Boolean).join(" ") || formData.alumnoNombre}.${formData.alumnoNombre ? `\nAlumna: ${formData.alumnoNombre}${formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}` : ""}\n\nQuedo atenta a la confirmación. ¡Gracias!`
   );
 
   const handleCrearCuenta = () => {
     window.sessionStorage.setItem(
       REGISTRO_PREFILL_KEY,
       JSON.stringify({
-        nombre: formData.nombre,
-        apellido: formData.apellido,
+        nombre: nombreContacto,
+        apellido: apellidoContacto,
         telefono: formData.telefono,
         email: formData.email,
       })
@@ -450,34 +462,39 @@ export default function TurneroPage() {
               <section>
                 <h2 className="font-playfair text-3xl font-semibold mb-2">Datos de la alumna</h2>
                 <p className="text-[#8A8A99] text-sm mb-8">Completá los datos de quien va a tomar la clase y un contacto de WhatsApp.</p>
+                {esMayorDeEdad && (
+                  <div className="mb-6 rounded-2xl border border-[#E8A0B4]/20 bg-[#FDF0F4] px-5 py-4 text-sm text-[#4A4A55]">
+                    Como la alumna es mayor de edad, no hace falta completar un responsable. Si querés, podés dejar un nombre de contacto.
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                   <input value={formData.alumnoNombre} onChange={(e) => updateForm("alumnoNombre", e.target.value)} placeholder="Nombre de la alumna *" className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
                   <input value={formData.alumnoEdad} onChange={(e) => updateForm("alumnoEdad", e.target.value)} placeholder="Edad *" type="number" min="2" max="99" className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
-                  <input value={formData.nombre} onChange={(e) => updateForm("nombre", e.target.value)} placeholder="Nombre del responsable *" className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
-                  <input value={formData.apellido} onChange={(e) => updateForm("apellido", e.target.value)} placeholder="Apellido" className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
+                  <input value={formData.nombre} onChange={(e) => updateForm("nombre", e.target.value)} placeholder={esMayorDeEdad ? "Nombre de contacto (opcional)" : "Nombre del responsable *"} className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
+                  <input value={formData.apellido} onChange={(e) => updateForm("apellido", e.target.value)} placeholder={esMayorDeEdad ? "Apellido de contacto (opcional)" : "Apellido del responsable"} className="p-4 bg-white border border-gray-100 rounded-[1.2rem]" />
                   <input value={formData.telefono} onChange={(e) => updateForm("telefono", e.target.value)} placeholder="WhatsApp (Ej: 351...) *" className="p-4 bg-white border border-gray-100 rounded-[1.2rem] md:col-span-2" />
                 </div>
                 <div className="flex justify-between items-center">
                   <button type="button" onClick={() => setStep(esAsesoramiento ? 1 : 2)} className="text-[#8A8A99] font-bold text-sm">← Volver</button>
-                  <button type="button" onClick={() => setStep(4)} disabled={!formData.nombre || !formData.telefono || !formData.alumnoNombre || !formData.alumnoEdad} className="bg-[#1A1A22] text-white px-12 py-4 rounded-full font-bold disabled:opacity-20">Siguiente →</button>
+                  <button type="button" onClick={() => setStep(4)} disabled={!puedeAvanzarDatos} className="bg-[#1A1A22] text-white px-12 py-4 rounded-full font-bold disabled:opacity-20">Siguiente →</button>
                 </div>
               </section>
             )}
 
             {step === 4 && (
               <section>
-                <h2 className="font-playfair text-3xl font-semibold mb-8">Confirmá tu lugar</h2>
+                <h2 className="font-playfair text-3xl font-semibold mb-8">Revisá tu solicitud</h2>
                 <div className="bg-white rounded-[2.5rem] p-10 border border-[#E8A0B4]/20 shadow-sm mb-8 space-y-5">
                   <div className="flex justify-between border-b border-gray-50 pb-4"><span className="text-[#8A8A99]">Disciplina</span><strong className="text-[#C97A96]">{formData.disciplina}</strong></div>
                   {!esAsesoramiento && <div className="flex justify-between border-b border-gray-50 pb-4"><span className="text-[#8A8A99]">Fecha</span><strong className="capitalize">{fechaFormateada}</strong></div>}
                   {!esAsesoramiento && <div className="flex justify-between border-b border-gray-50 pb-4"><span className="text-[#8A8A99]">Horario</span><strong>{formData.horario} hs</strong></div>}
                   {esAsesoramiento && <div className="flex justify-between border-b border-gray-50 pb-4"><span className="text-[#8A8A99]">Coordinación</span><strong>Te orientamos por WhatsApp</strong></div>}
                   <div className="flex justify-between border-b border-gray-50 pb-4"><span className="text-[#8A8A99]">Alumna</span><strong>{formData.alumnoNombre}{formData.alumnoEdad ? ` (${formData.alumnoEdad} años)` : ""}</strong></div>
-                  <div className="flex justify-between"><span className="text-[#8A8A99]">Contacto</span><strong>{formData.nombre} {formData.apellido}</strong></div>
+                  <div className="flex justify-between"><span className="text-[#8A8A99]">{esMayorDeEdad ? "Contacto" : "Responsable"}</span><strong>{[nombreContacto, apellidoContacto].filter(Boolean).join(" ") || formData.alumnoNombre}</strong></div>
                 </div>
                 <div className="flex justify-between items-center">
                   <button type="button" onClick={() => setStep(3)} className="text-[#8A8A99] font-bold text-sm">← Volver</button>
-                  <button type="button" onClick={confirmarReserva} disabled={isSubmitting} className="bg-[#C97A96] text-white px-14 py-4 rounded-full font-bold disabled:opacity-50">{isSubmitting ? "Procesando..." : "Confirmar reserva"}</button>
+                  <button type="button" onClick={confirmarReserva} disabled={isSubmitting} className="bg-[#C97A96] text-white px-14 py-4 rounded-full font-bold disabled:opacity-50">{isSubmitting ? "Procesando..." : "Enviar solicitud"}</button>
                 </div>
               </section>
             )}
@@ -485,12 +502,12 @@ export default function TurneroPage() {
             {step === 5 && (
               <section className="text-center py-16">
                 <div className="w-24 h-24 bg-gradient-to-br from-[#FDF0F4] to-[#E8A0B4] rounded-full flex items-center justify-center text-5xl mx-auto mb-8">🎉</div>
-                <h2 className="font-playfair text-5xl font-bold mb-4">¡Reserva exitosa!</h2>
-                <p className="text-[#8A8A99] max-w-md mx-auto mb-8">Tu solicitud ya quedó registrada. Escribinos por WhatsApp para confirmar y recibir toda la información.</p>
+                <h2 className="font-playfair text-5xl font-bold mb-4">¡Solicitud enviada!</h2>
+                <p className="text-[#8A8A99] max-w-md mx-auto mb-8">Tu turno quedó registrado como pendiente. La confirmación final la realiza el equipo de la academia desde administración.</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-                  {telefonoAcademia && <a href={`https://wa.me/${telefonoAcademia}?text=${mensajeWA}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366] text-white px-8 py-4 rounded-full font-bold">Confirmar por WhatsApp</a>}
+                  {telefonoAcademia && <a href={`https://wa.me/${telefonoAcademia}?text=${mensajeWA}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366] text-white px-8 py-4 rounded-full font-bold">Escribir por WhatsApp</a>}
                   <Link href="/" className="bg-[#1A1A22] text-white px-8 py-4 rounded-full font-bold">Volver al inicio</Link>
-                  {isAuthenticated && <Link href="/perfil" className="bg-white text-[#1A1A22] px-8 py-4 rounded-full font-bold border border-gray-200">Ir a mi perfil</Link>}
+                  {isAuthenticated && <Link href={isAdminUser ? "/admin/dashboard" : "/perfil"} className="bg-white text-[#1A1A22] px-8 py-4 rounded-full font-bold border border-gray-200">{isAdminUser ? "Ir al dashboard" : "Ir a mi perfil"}</Link>}
                 </div>
                 <div className="bg-white rounded-2xl border border-[#E8A0B4]/20 p-6 max-w-sm mx-auto shadow-sm text-left">
                   <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-3">Resumen</p>
@@ -499,6 +516,7 @@ export default function TurneroPage() {
                     {!esAsesoramiento && <div className="flex justify-between"><span className="text-[#8A8A99]">Fecha</span><strong className="capitalize">{fechaFormateada}</strong></div>}
                     {!esAsesoramiento && <div className="flex justify-between"><span className="text-[#8A8A99]">Horario</span><strong>{formData.horario} hs</strong></div>}
                     {esAsesoramiento && <div className="flex justify-between"><span className="text-[#8A8A99]">Seguimiento</span><strong>Coordinación por WhatsApp</strong></div>}
+                    <div className="flex justify-between"><span className="text-[#8A8A99]">Estado</span><strong className="text-[#F59E0B]">Pendiente de confirmación</strong></div>
                   </div>
                 </div>
                 {!isAuthenticated && (

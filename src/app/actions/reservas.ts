@@ -138,13 +138,17 @@ async function crearReservaSegura({
     data: { user },
   } = await supabase.auth.getUser()
 
-  const nombreLimpio = normalizarTexto(nombre)
+  let nombreLimpio = normalizarTexto(nombre)
   const apellidoLimpio = normalizarTexto(apellido ?? '')
   const telefonoLimpio = normalizarTelefono(telefono)
   const emailLimpio = normalizarTexto(email ?? '')
   const disciplinaLimpia = normalizarTexto(disciplina)
   const horarioLimpio = normalizarTexto(horario)
   const alumnoNombreLimpio = normalizarTexto(alumnoNombre ?? '')
+
+  if (!nombreLimpio && alumnoNombreLimpio && typeof alumnoEdad === 'number' && alumnoEdad >= 18) {
+    nombreLimpio = alumnoNombreLimpio
+  }
 
   if (!nombreLimpio || !telefonoLimpio || !disciplinaLimpia) {
     return { success: false, error: 'Completá los datos obligatorios antes de continuar.' }

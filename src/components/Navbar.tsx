@@ -21,6 +21,10 @@ export default function Navbar() {
 
   const pathname = usePathname()
   const router = useRouter()
+  const userRole = user?.app_metadata?.role || user?.user_metadata?.role
+  const isAdminUser = userRole === 'admin'
+  const profileHref = isAdminUser ? '/admin/dashboard' : '/perfil'
+  const profileLabel = isAdminUser ? 'Dashboard' : 'Mi perfil'
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -122,10 +126,10 @@ export default function Navbar() {
           {user ? (
             <>
               <Link
-                href="/perfil"
+                href={profileHref}
                 className="no-underline text-[#1A1A22] text-sm font-semibold flex items-center gap-1.5 hover:text-[#C97A96] transition-colors"
               >
-                Mi perfil
+                {profileLabel}
               </Link>
               <button
                 onClick={handleLogout}
@@ -193,11 +197,11 @@ export default function Navbar() {
           {user ? (
             <div className="flex flex-col gap-4 mt-4">
               <Link
-                href="/perfil"
+                href={profileHref}
                 onClick={() => setMenuOpen(false)}
                 className="no-underline text-[#1A1A22] font-semibold text-center"
               >
-                Mi perfil
+                {profileLabel}
               </Link>
               <button
                 onClick={handleLogout}
