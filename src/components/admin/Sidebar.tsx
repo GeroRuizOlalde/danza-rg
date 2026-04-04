@@ -100,7 +100,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   ]
 
   const baseLinkClass =
-    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] transition-all'
+    'flex items-center gap-3 rounded-xl px-3 py-2 text-[0.86rem] transition-all'
 
   return (
     <>
@@ -120,7 +120,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       >
         <div className="pointer-events-none absolute -bottom-[100px] -left-[100px] h-[300px] w-[300px] bg-[radial-gradient(circle,rgba(232,160,180,0.07)_0%,transparent_65%)]" />
 
-        <div className="border-b border-white/5 p-6 pb-5">
+        <div className="border-b border-white/5 px-6 pb-4 pt-5">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[2px] text-white/30">
               Menu
@@ -141,13 +141,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           >
             R.G <span className="text-[#E8A0B4]">Danza</span>
           </Link>
-          <p className="mt-1 text-[0.7rem] text-white/25">Panel de administracion</p>
+          <p className="mt-1 text-[0.68rem] text-white/25">Panel de administracion</p>
         </div>
 
-        <nav className="z-10 flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+        <nav className="z-10 flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((group) => (
             <div key={group.section}>
-              <div className="mt-2 px-3 pb-1.5 pt-3 text-[0.65rem] font-semibold uppercase tracking-[1.5px] text-white/20">
+              <div className="mt-1.5 px-3 pb-1 pt-2.5 text-[0.63rem] font-semibold uppercase tracking-[1.5px] text-white/20">
                 {group.section}
               </div>
 
@@ -187,7 +187,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="z-10 border-t border-white/5 p-5">
+        <div className="z-10 border-t border-white/5 p-4">
           <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#C97A96] to-[#E8A0B4] text-[0.75rem] font-semibold text-white">
