@@ -179,46 +179,24 @@ export default function Navbar() {
       </button>
 
       <div
-        className={`fixed inset-0 z-[99] bg-[#1A1A22]/40 transition-opacity duration-300 md:hidden ${
-          menuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-[#FFF9FB]/98 backdrop-blur-xl transition-transform duration-300 md:hidden ${
+          menuOpen ? 'translate-y-0' : 'pointer-events-none -translate-y-4 opacity-0'
         }`}
-        onClick={closeMenu}
       >
-        <div
-          className={`absolute right-0 top-0 flex h-full w-[min(88vw,360px)] flex-col border-l border-[#E8A0B4]/20 bg-[#FFF9FB] px-6 py-6 shadow-[-18px_0_48px_rgba(26,26,34,0.18)] transition-transform duration-300 ${
-            menuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="mb-8 flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[2px] text-[#C97A96]">
-                Navegacion
-              </p>
-              <div className="mt-2 truncate font-playfair text-2xl font-bold text-[#1A1A22]">
-                {renderLogo()}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={closeMenu}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E8A0B4]/20 bg-white text-lg text-[#4A4A55] transition-colors hover:border-[#C97A96] hover:text-[#C97A96]"
-              aria-label="Cerrar menu"
-            >
-              x
-            </button>
-          </div>
-
-          <div className="mb-6 rounded-[28px] bg-[#1A1A22] px-5 py-4 text-white">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[2px] text-[#E8A0B4]">
-              Clase de prueba
+        <div className="mx-auto flex h-full max-w-[520px] flex-col overflow-y-auto px-5 pb-8 pt-5">
+          <div className="mb-5 rounded-[28px] border border-[#E8A0B4]/20 bg-white px-5 py-5 shadow-[0_12px_32px_rgba(26,26,34,0.08)]">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[2px] text-[#C97A96]">
+              Navegacion
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-white/72">
+            <div className="mt-2 font-playfair text-[2rem] font-bold leading-none text-[#1A1A22]">
+              {renderLogo()}
+            </div>
+            <p className="mt-4 rounded-[24px] bg-[#1A1A22] px-4 py-4 text-sm leading-relaxed text-white/78">
               Reserva desde el celular y deja tus datos listos para agilizar el ingreso.
             </p>
           </div>
 
-          <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+          <div className="flex flex-col gap-2">
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
