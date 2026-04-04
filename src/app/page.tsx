@@ -8,6 +8,7 @@ import SalaSelector from '@/components/landing/SalaSelector'
 import InscripcionForm from '@/components/landing/InscripcionForm'
 import FadeInObserver from '@/components/landing/FadeInObserver'
 import ClaseCard from '@/components/landing/ClaseCard'
+import { filtrarHorariosPorDiasAbiertos, sanitizeDiasAbiertos } from '@/lib/academia'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 type AcademiaInfo = {
@@ -15,6 +16,7 @@ type AcademiaInfo = {
   telefono: string
   direccion: string
   instagram: string
+  dias_abiertos?: string[] | null
 }
 
 type ClaseRecord = Record<string, unknown> & {
@@ -68,7 +70,8 @@ export default async function HomePage() {
 
   const clasesDB = clases ?? []
   const galeriaDB = galeria ?? []
-  const horariosDB = horarios ?? []
+  const diasAbiertos = sanitizeDiasAbiertos(infoAcademia.dias_abiertos)
+  const horariosDB = filtrarHorariosPorDiasAbiertos(horarios ?? [], diasAbiertos)
 
   const valores = [
     { code: '01', title: 'Ambiente seguro' },
@@ -204,7 +207,7 @@ export default async function HomePage() {
             Horarios de <em className="italic text-[#C97A96]">clases</em>
           </h2>
         </div>
-        <SalaSelector horarios={horariosDB} />
+        <SalaSelector horarios={horariosDB} diasAbiertos={diasAbiertos} />
       </section>
 
       <section

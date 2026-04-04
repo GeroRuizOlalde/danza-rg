@@ -24,7 +24,7 @@ type Asistencia = {
   profesor_id: string;
   fecha: string;        // YYYY-MM-DD
   presente: boolean;
-  nota: string | null;
+  nota?: string | null;
 };
 
 type FormState = {

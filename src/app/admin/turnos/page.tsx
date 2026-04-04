@@ -20,11 +20,32 @@ type Reserva = {
   horario: string;
   estado: string;
   origen?: string;
+  perfil_id?: string | null;
 };
 
 type Clase = {
   id: string;
   nombre: string;
+};
+
+type Cliente = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  email?: string | null;
+  estado?: string | null;
+};
+
+type NuevoTurnoForm = {
+  perfilId: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  disciplina: string;
+  fecha: string;
+  horario: string;
+  estado: string;
 };
 
 const FILTROS = [
@@ -39,6 +60,17 @@ const FILTROS = [
 ];
 
 const ARCHIVE_AFTER_DAYS = 30;
+
+const EMPTY_NUEVO_TURNO: NuevoTurnoForm = {
+  perfilId: "",
+  nombre: "",
+  apellido: "",
+  telefono: "",
+  disciplina: "",
+  fecha: "",
+  horario: "",
+  estado: "pendiente",
+};
 
 const HORAS = [
   "17:00",
@@ -113,26 +145,21 @@ export default function TurnosPage() {
   const [filtroActivo, setFiltroActivo] = useState("Todos");
   const [turnos, setTurnos] = useState<Reserva[]>([]);
   const [clases, setClases] = useState<Clase[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cargando, setCargando] = useState(true);
   const hoyIso = useMemo(() => getTodayIso(), []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [nuevoTurno, setNuevoTurno] = useState({
-    nombre: "",
-    apellido: "",
-    telefono: "",
-    disciplina: "",
-    fecha: "",
-    horario: "",
-    estado: "pendiente",
-  });
+  const [nuevoTurno, setNuevoTurno] = useState<NuevoTurnoForm>(EMPTY_NUEVO_TURNO);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTurnos();
     fetchClases();
+    fetchClientes();
   }, []);
 
   async function fetchTurnos() {
@@ -164,6 +191,72 @@ export default function TurnosPage() {
     }
   }
 
+  function resetNuevoTurno() {
+    setNuevoTurno(EMPTY_NUEVO_TURNO);
+    setBusquedaCliente("");
+  }
+
+  function handleCloseModal() {
+    setIsModalOpen(false);
+    resetNuevoTurno();
+  }
+
+  function getClienteLabel(cliente: Cliente) {
+    const nombreCompleto = [cliente.apellido, cliente.nombre].filter(Boolean).join(", ");
+    const telefono = cliente.telefono?.trim() ? ` · ${cliente.telefono}` : "";
+    return `${nombreCompleto || "Sin nombre"}${telefono}`;
+  }
+
+  function handleSeleccionarCliente(clienteId: string) {
+    const cliente = clientes.find((item) => item.id === clienteId);
+
+    if (!cliente) {
+      setBusquedaCliente("");
+      setNuevoTurno((prev) => ({ ...prev, perfilId: "" }));
+      return;
+    }
+
+    setBusquedaCliente("");
+    setNuevoTurno((prev) => ({
+      ...prev,
+      perfilId: cliente.id,
+      nombre: cliente.nombre || "",
+      apellido: cliente.apellido || "",
+      telefono: cliente.telefono || "",
+    }));
+  }
+
+  async function fetchClientes() {
+    const { data } = await supabase
+      .from("perfiles")
+      .select("id, nombre, apellido, telefono, email, estado")
+      .order("apellido", { ascending: true })
+      .order("nombre", { ascending: true });
+
+    if (data) {
+      setClientes(data);
+    }
+  }
+
+  const clienteSeleccionado = useMemo(
+    () => clientes.find((cliente) => cliente.id === nuevoTurno.perfilId) || null,
+    [clientes, nuevoTurno.perfilId]
+  );
+
+  const clientesFiltrados = useMemo(() => {
+    const termino = busquedaCliente.trim().toLowerCase();
+
+    if (!termino) {
+      return clientes;
+    }
+
+    return clientes.filter((cliente) =>
+      [cliente.nombre, cliente.apellido, cliente.telefono, cliente.email]
+        .filter(Boolean)
+        .some((valor) => String(valor).toLowerCase().includes(termino))
+    );
+  }, [busquedaCliente, clientes]);
+
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
     const result = await actualizarReservaEstadoAdminAction(id, nuevoEstado);
 
@@ -192,16 +285,7 @@ export default function TurnosPage() {
       return;
     }
 
-    setIsModalOpen(false);
-    setNuevoTurno({
-      nombre: "",
-      apellido: "",
-      telefono: "",
-      disciplina: "",
-      fecha: "",
-      horario: "",
-      estado: "pendiente",
-    });
+    handleCloseModal();
     await fetchTurnos();
   };
 
@@ -282,7 +366,10 @@ export default function TurnosPage() {
         </div>
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            resetNuevoTurno();
+            setIsModalOpen(true);
+          }}
           className="inline-flex items-center gap-2 bg-[#C97A96] text-white rounded-full px-5 py-2.5 text-[0.82rem] font-semibold hover:bg-[#1A1A22] transition-all shadow-md shadow-[#C97A96]/20"
         >
           + Nuevo turno
@@ -355,7 +442,10 @@ export default function TurnosPage() {
               <p className="font-medium text-[0.9rem]">No hay turnos para este filtro</p>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  resetNuevoTurno();
+                  setIsModalOpen(true);
+                }}
                 className="mt-4 text-[#C97A96] font-medium text-sm hover:underline"
               >
                 + Crear primer turno
@@ -400,6 +490,14 @@ export default function TurnosPage() {
                             <span className="font-medium text-[#1A1A22] text-[0.85rem]">
                               {turno.nombre} {turno.apellido}
                             </span>
+                            {turno.perfil_id && (
+                              <span
+                                className="text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-100"
+                                title="Turno vinculado a una cuenta existente de clientes"
+                              >
+                                Cliente
+                              </span>
+                            )}
                             {turno.origen === "landing" && (
                               <span
                                 className="text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100"
@@ -507,13 +605,45 @@ export default function TurnosPage() {
               </h3>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 className="text-[#C97A96] hover:text-[#1A1A22] text-xl transition-colors"
               >
                 ✕
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <div className="rounded-2xl border border-[#E8A0B4]/20 bg-[#FDF0F4]/40 p-4">
+                <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
+                  Cuenta existente en clientes
+                </label>
+                <input
+                  type="text"
+                  value={busquedaCliente}
+                  onChange={(event) => setBusquedaCliente(event.target.value)}
+                  placeholder="Buscar por nombre, apellido, telefono o email"
+                  className="mb-3 w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                />
+                <select
+                  value={nuevoTurno.perfilId}
+                  onChange={(event) => handleSeleccionarCliente(event.target.value)}
+                  className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
+                >
+                  <option value="">Sin cuenta asociada / carga manual</option>
+                  {clientesFiltrados.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {getClienteLabel(cliente)}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-[0.72rem] text-[#8A8A99]">
+                  Si seleccionas un cliente, el turno queda vinculado a esa cuenta y se usan sus datos guardados.
+                </p>
+                {clienteSeleccionado && (
+                  <p className="mt-2 text-[0.72rem] font-medium text-[#C97A96]">
+                    Cliente seleccionado: {getClienteLabel(clienteSeleccionado)}
+                  </p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
@@ -522,11 +652,12 @@ export default function TurnosPage() {
                   <input
                     required
                     type="text"
+                    disabled={Boolean(clienteSeleccionado)}
                     value={nuevoTurno.nombre}
                     onChange={(event) =>
                       setNuevoTurno({ ...nuevoTurno, nombre: event.target.value })
                     }
-                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all disabled:bg-gray-50 disabled:text-[#8A8A99] disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -535,11 +666,12 @@ export default function TurnosPage() {
                   </label>
                   <input
                     type="text"
+                    disabled={Boolean(clienteSeleccionado)}
                     value={nuevoTurno.apellido}
                     onChange={(event) =>
                       setNuevoTurno({ ...nuevoTurno, apellido: event.target.value })
                     }
-                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                    className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all disabled:bg-gray-50 disabled:text-[#8A8A99] disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -549,12 +681,13 @@ export default function TurnosPage() {
                 </label>
                 <input
                   type="tel"
+                  disabled={Boolean(clienteSeleccionado)}
                   value={nuevoTurno.telefono}
                   onChange={(event) =>
                     setNuevoTurno({ ...nuevoTurno, telefono: event.target.value })
                   }
                   placeholder="Ej: 351..."
-                  className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
+                  className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all disabled:bg-gray-50 disabled:text-[#8A8A99] disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -633,7 +766,7 @@ export default function TurnosPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-all"
                 >
                   Cancelar

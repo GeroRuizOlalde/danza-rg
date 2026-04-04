@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
+import { isDiaAbierto, sanitizeDiasAbiertos } from "@/lib/academia";
 import { supabase } from "@/lib/supabase";
 import { eliminarHorarioAdminAction, guardarHorarioAdminAction } from "../actions";
 
@@ -18,13 +20,13 @@ type Horario = {
   clases?: { nombre: string };
 };
 
-const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 const HORAS = [17, 18, 19, 20, 21];
 
 export default function HorariosPage() {
   const [sala, setSala] = useState<1 | 2>(1);
   const [clases, setClases] = useState<Clase[]>([]);
   const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [diasAbiertos, setDiasAbiertos] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -47,13 +49,15 @@ export default function HorariosPage() {
     setCargando(true);
 
     try {
-      const [{ data: dataClases }, { data: dataHorarios }] = await Promise.all([
+      const [{ data: dataClases }, { data: dataHorarios }, { data: dataAcademia }] = await Promise.all([
         supabase.from("clases").select("id, nombre").order("nombre"),
         supabase.from("horarios").select("*, clases(nombre)"),
+        supabase.from("academia_info").select("*").single(),
       ]);
 
       if (dataClases) setClases(dataClases);
       if (dataHorarios) setHorarios(dataHorarios);
+      setDiasAbiertos(sanitizeDiasAbiertos(dataAcademia?.dias_abiertos));
     } catch (error) {
       console.error("Error al cargar datos:", error);
     } finally {
@@ -135,6 +139,10 @@ export default function HorariosPage() {
     setIsModalOpen(false);
   };
 
+  const horariosFueraDeConfiguracion = horarios.filter(
+    (horario) => !isDiaAbierto(horario.dia, diasAbiertos)
+  );
+
   return (
     <div>
       <div className="mb-7">
@@ -145,6 +153,25 @@ export default function HorariosPage() {
           Hace clic en cualquier espacio de la tabla para asignar una clase.
         </p>
       </div>
+
+      {horariosFueraDeConfiguracion.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-[0.85rem] text-amber-900">
+          <strong className="block text-[0.9rem] font-semibold">
+            Hay horarios cargados en dias que hoy figuran como cerrados.
+          </strong>
+          <p className="mt-1">
+            Esos horarios no se muestran en esta grilla ni en la web publica hasta que
+            vuelvas a habilitar esos dias en configuracion.
+          </p>
+          <p className="mt-2 text-[0.78rem]">
+            Dias detectados:{" "}
+            {Array.from(new Set(horariosFueraDeConfiguracion.map((horario) => horario.dia))).join(", ")}
+          </p>
+          <Link href="/admin/configuracion" className="mt-3 inline-flex font-semibold underline">
+            Ir a configuracion
+          </Link>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-6">
         {([1, 2] as const).map((numeroSala) => (
@@ -174,7 +201,7 @@ export default function HorariosPage() {
                 <th className="py-4 px-4 font-semibold text-[#1A1A22] text-[0.85rem] w-[80px] text-center">
                   HS
                 </th>
-                {DIAS.map((dia) => (
+                {diasAbiertos.map((dia) => (
                   <th
                     key={dia}
                     className="py-4 px-3 font-semibold text-[#1A1A22] text-[0.85rem] uppercase tracking-wider text-center w-[18%]"
@@ -190,7 +217,7 @@ export default function HorariosPage() {
                   <td className="py-3 px-4 font-bold text-[#C97A96] text-[1.1rem] text-center bg-[#FDF0F4]/30 border-r border-[#E8A0B4]/10">
                     {hora}
                   </td>
-                  {DIAS.map((dia) => {
+                  {diasAbiertos.map((dia) => {
                     const celda = horarios.find((item) => item.dia === dia && item.hora === hora && item.sala === sala);
 
                     return (

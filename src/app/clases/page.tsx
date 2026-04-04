@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ClasesFiltro from '@/components/landing/ClasesFiltro'
+import { filtrarHorariosPorDiasAbiertos, sanitizeDiasAbiertos } from '@/lib/academia'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ type HorarioRecord = {
 
 type AcademiaInfo = {
   telefono: string
+  dias_abiertos?: string[] | null
 }
 
 export default async function ClasesPage() {
@@ -48,14 +50,16 @@ export default async function ClasesPage() {
     ;[{ data: clasesData }, { data: horariosData }, { data: info }] = await Promise.all([
       supabase.from('clases').select('*').or('estado.eq.activa,estado.is.null').order('nombre'),
       supabase.from('horarios').select('clase_id, dia, hora'),
-      supabase.from('academia_info').select('telefono').single(),
+      supabase.from('academia_info').select('*').single(),
     ])
   }
 
   const telefonoLimpio = (info?.telefono ?? '3516793151').replace(/\D/g, '')
+  const diasAbiertos = sanitizeDiasAbiertos(info?.dias_abiertos)
+  const horariosVisibles = filtrarHorariosPorDiasAbiertos(horariosData ?? [], diasAbiertos)
 
   const clases = (clasesData ?? []).map((clase) => {
-    const susHorarios = (horariosData ?? [])
+    const susHorarios = horariosVisibles
       .filter((h) => h.clase_id === clase.id)
       .map((h) => `${h.dia} ${h.hora}:00`)
 

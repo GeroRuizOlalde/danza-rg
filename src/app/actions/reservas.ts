@@ -1,6 +1,7 @@
 'use server'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isDiaAbierto, sanitizeDiasAbiertos } from '@/lib/academia'
 import { missingSupabaseEnvMessage } from '@/lib/supabase-env'
 import {
   ESTADOS_RESERVA_ACTIVA,
@@ -38,6 +39,20 @@ type TurneroReservationInput = {
 
 type HorarioLookup = {
   cupo_maximo: number | null
+}
+
+async function obtenerDiasAbiertosAcademia(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('academia_info')
+    .select('*')
+    .limit(1)
+    .maybeSingle<{ dias_abiertos?: string[] | null }>()
+
+  if (error) {
+    throw error
+  }
+
+  return sanitizeDiasAbiertos(data?.dias_abiertos)
 }
 
 async function contarReservasActivas(
@@ -140,6 +155,16 @@ async function crearReservaSegura({
       return { success: false, error: 'Seleccioná una fecha para la reserva.' }
     }
 
+    const diaReserva = getDiaSemana(fecha)
+    const diasAbiertos = await obtenerDiasAbiertosAcademia(supabase)
+
+    if (!isDiaAbierto(diaReserva, diasAbiertos)) {
+      return {
+        success: false,
+        error: 'La academia no recibe reservas para ese dia.',
+      }
+    }
+
     const horarioExistente = await obtenerHorarioTurnero(
       supabase,
       disciplinaLimpia,
@@ -147,21 +172,26 @@ async function crearReservaSegura({
       horarioLimpio
     )
 
-    if (horarioExistente) {
-      const reservados = await contarReservasActivas(
-        supabase,
-        disciplinaLimpia,
-        fecha,
-        horarioLimpio
-      )
+    if (!horarioExistente) {
+      return {
+        success: false,
+        error: 'Ese horario ya no esta disponible. Elegi otro para continuar.',
+      }
+    }
 
-      const cupoDisponible = horarioExistente.cupo_maximo || 20
+    const reservados = await contarReservasActivas(
+      supabase,
+      disciplinaLimpia,
+      fecha,
+      horarioLimpio
+    )
 
-      if (reservados >= cupoDisponible) {
-        return {
-          success: false,
-          error: 'Ese horario ya se quedó sin cupo. Elegí otro para continuar.',
-        }
+    const cupoDisponible = horarioExistente.cupo_maximo || 20
+
+    if (reservados >= cupoDisponible) {
+      return {
+        success: false,
+        error: 'Ese horario ya se quedó sin cupo. Elegí otro para continuar.',
       }
     }
   }

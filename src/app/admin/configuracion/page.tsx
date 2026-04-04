@@ -2,25 +2,39 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { DIAS_ABIERTOS_DEFAULT, DIAS_SEMANA_ORDENADOS, sanitizeDiasAbiertos } from "@/lib/academia";
 import { supabase } from "@/lib/supabase";
 import {
   actualizarAcademiaAdminAction,
   actualizarAdminDisplayNameAction,
 } from "../actions";
 
+type AcademiaState = {
+  id: string;
+  nombre: string;
+  telefono: string;
+  email: string;
+  direccion: string;
+  instagram: string;
+  dias_abiertos: string[];
+};
+
+const ACADEMIA_DEFAULT: AcademiaState = {
+  id: "",
+  nombre: "",
+  telefono: "",
+  email: "",
+  direccion: "",
+  instagram: "",
+  dias_abiertos: [...DIAS_ABIERTOS_DEFAULT],
+};
+
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<"perfil" | "academia">("perfil");
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [perfil, setPerfil] = useState({ nombre: "", email: "" });
-  const [academia, setAcademia] = useState({
-    id: "",
-    nombre: "",
-    telefono: "",
-    email: "",
-    direccion: "",
-    instagram: "",
-  });
+  const [academia, setAcademia] = useState<AcademiaState>(ACADEMIA_DEFAULT);
 
   useEffect(() => {
     async function fetchData() {
@@ -39,7 +53,15 @@ export default function ConfiguracionPage() {
         const { data: infoAcademia } = await supabase.from("academia_info").select("*").single();
 
         if (infoAcademia) {
-          setAcademia(infoAcademia);
+          setAcademia({
+            id: infoAcademia.id || "",
+            nombre: infoAcademia.nombre || "",
+            telefono: infoAcademia.telefono || "",
+            email: infoAcademia.email || "",
+            direccion: infoAcademia.direccion || "",
+            instagram: infoAcademia.instagram || "",
+            dias_abiertos: sanitizeDiasAbiertos(infoAcademia.dias_abiertos),
+          });
         }
       } catch (error) {
         console.error("Error al cargar configuracion:", error);
@@ -69,6 +91,12 @@ export default function ConfiguracionPage() {
 
   const handleGuardarAcademia = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (academia.dias_abiertos.length === 0) {
+      toast.error("Selecciona al menos un dia abierto.");
+      return;
+    }
+
     setGuardando(true);
 
     const result = await actualizarAcademiaAdminAction({
@@ -78,6 +106,7 @@ export default function ConfiguracionPage() {
       email: academia.email,
       direccion: academia.direccion,
       instagram: academia.instagram,
+      dias_abiertos: academia.dias_abiertos,
     });
 
     setGuardando(false);
@@ -88,6 +117,15 @@ export default function ConfiguracionPage() {
     }
 
     toast.success("Datos de la academia actualizados.");
+  };
+
+  const toggleDiaAbierto = (dia: string) => {
+    setAcademia((current) => ({
+      ...current,
+      dias_abiertos: DIAS_SEMANA_ORDENADOS.filter((item) =>
+        item === dia ? !current.dias_abiertos.includes(dia) : current.dias_abiertos.includes(item)
+      ),
+    }));
   };
 
   if (cargando) {
@@ -241,6 +279,35 @@ export default function ConfiguracionPage() {
                 onChange={(e) => setAcademia({ ...academia, direccion: e.target.value })}
                 className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
               />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
+                Dias en los que abre la academia
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {DIAS_SEMANA_ORDENADOS.map((dia) => {
+                  const activo = academia.dias_abiertos.includes(dia);
+
+                  return (
+                    <button
+                      key={dia}
+                      type="button"
+                      onClick={() => toggleDiaAbierto(dia)}
+                      className={`rounded-xl border px-4 py-3 text-left text-[0.85rem] font-medium transition-all ${
+                        activo
+                          ? "border-[#C97A96] bg-[#FDF0F4] text-[#C97A96]"
+                          : "border-[#E8A0B4]/20 bg-white text-[#4A4A55] hover:border-[#C97A96]/40"
+                      }`}
+                    >
+                      {dia}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[0.72rem] text-[#8A8A99] mt-2">
+                Esta configuracion define que dias se pueden cargar en la grilla de
+                horarios y cuales se muestran en la web.
+              </p>
             </div>
           </div>
           <div className="mt-6 pt-5 border-t border-[#E8A0B4]/20 flex justify-end">

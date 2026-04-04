@@ -14,6 +14,7 @@ import {
   formatHoraReserva,
   HORARIO_A_COORDINAR,
 } from "@/lib/reservas";
+import { filtrarHorariosPorDiasAbiertos, sanitizeDiasAbiertos } from "@/lib/academia";
 import { supabase } from "@/lib/supabase";
 
 type ClaseDB = { id: string; nombre: string; edades: string | null; estado: string | null };
@@ -145,7 +146,7 @@ export default function TurneroPage() {
           supabase.auth.getUser(),
           supabase.from("clases").select("*"),
           supabase.from("horarios").select("*"),
-          supabase.from("academia_info").select("telefono").single(),
+          supabase.from("academia_info").select("*").single(),
           supabase.from("reservas").select("disciplina, horario, fecha").in("estado", [...ESTADOS_RESERVA_ACTIVA]),
         ]);
 
@@ -165,8 +166,9 @@ export default function TurneroPage() {
         }
 
         const clasesActivas = resClases.data?.filter((clase: ClaseDB) => clase.estado === "activa" || !clase.estado) || [];
+        const diasAbiertos = sanitizeDiasAbiertos(resInfo.data?.dias_abiertos);
         setClases(clasesActivas);
-        setHorarios(resHorarios.data || []);
+        setHorarios(filtrarHorariosPorDiasAbiertos(resHorarios.data || [], diasAbiertos));
         if (resInfo.data?.telefono) setTelefonoAcademia(resInfo.data.telefono.replace(/\D/g, ""));
 
         if (resReservas.data) {

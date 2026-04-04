@@ -1,6 +1,7 @@
 'use server'
 
 import { randomUUID } from 'node:crypto'
+import { DIAS_SEMANA_ORDENADOS, isDiaAbierto, sanitizeDiasAbiertos } from '@/lib/academia'
 import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
 import { createAdminSupabase, requireAdminUser } from '@/lib/supabase-server'
 
@@ -19,6 +20,7 @@ type AcademiaInput = {
   email: string
   direccion: string
   instagram: string
+  dias_abiertos: string[]
 }
 
 type ClaseInput = {
@@ -49,6 +51,7 @@ type ReservaInput = {
   fecha: string
   horario: string
   estado: string
+  perfilId?: string
 }
 
 type PagoInput = {
@@ -81,12 +84,14 @@ type AsistenciaRecord = {
   profesor_id: string
   fecha: string
   presente: boolean
-  nota: string | null
+  nota?: string | null
 }
 
 const ESTADOS_RESERVA_VALIDOS = new Set(['pendiente', 'confirmado', 'cancelado'])
 const ESTADOS_CLASE_VALIDOS = new Set(['activa', 'inactiva'])
-const DIAS_VALIDOS = new Set(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'])
+const DIAS_VALIDOS: ReadonlySet<string> = new Set(DIAS_SEMANA_ORDENADOS)
+
+const CLASES_STORAGE_PREFIX = 'clases/'
 
 function parseError(error: unknown, fallback: string) {
   if (error instanceof Error) {
@@ -115,6 +120,22 @@ async function getAdminContext() {
   return { supabaseAdmin, user }
 }
 
+async function obtenerDiasAbiertosAcademia(
+  supabaseAdmin: Awaited<ReturnType<typeof getAdminContext>>['supabaseAdmin']
+) {
+  const { data, error } = await supabaseAdmin
+    .from('academia_info')
+    .select('*')
+    .limit(1)
+    .maybeSingle<{ dias_abiertos?: string[] | null }>()
+
+  if (error) {
+    throw error
+  }
+
+  return sanitizeDiasAbiertos(data?.dias_abiertos)
+}
+
 function normalizarString(value: string | null | undefined) {
   return value?.trim() ?? ''
 }
@@ -132,6 +153,35 @@ function getSafeStoragePath(url: string) {
   }
 
   return url.split('?')[0]?.split('/').pop() ?? null
+}
+
+function getManagedClassImagePath(url: string | null | undefined) {
+  const normalizedUrl = normalizarString(url)
+
+  if (!normalizedUrl) {
+    return null
+  }
+
+  const storagePath = getSafeStoragePath(normalizedUrl)
+
+  if (!storagePath || !storagePath.startsWith(CLASES_STORAGE_PREFIX)) {
+    return null
+  }
+
+  return storagePath
+}
+
+async function removeManagedClassImage(
+  supabaseAdmin: Awaited<ReturnType<typeof getAdminContext>>['supabaseAdmin'],
+  imageUrl: string | null | undefined
+) {
+  const storagePath = getManagedClassImagePath(imageUrl)
+
+  if (!storagePath) {
+    return
+  }
+
+  await supabaseAdmin.storage.from('galeria').remove([storagePath]).catch(() => undefined)
 }
 
 export async function actualizarAdminDisplayNameAction(
@@ -178,7 +228,12 @@ export async function actualizarAcademiaAdminAction(
       return { success: false, error: 'No encontramos la configuración de la academia.' }
     }
 
+    if (!Array.isArray(input.dias_abiertos) || input.dias_abiertos.length === 0) {
+      return { success: false, error: 'Selecciona al menos un dia de apertura.' }
+    }
+
     const { supabaseAdmin } = await getAdminContext()
+    const diasAbiertos = sanitizeDiasAbiertos(input.dias_abiertos)
 
     const { error } = await supabaseAdmin
       .from('academia_info')
@@ -188,6 +243,7 @@ export async function actualizarAcademiaAdminAction(
         email: normalizarString(input.email) || null,
         direccion: normalizarString(input.direccion) || null,
         instagram: normalizarString(input.instagram) || null,
+        dias_abiertos: diasAbiertos,
       })
       .eq('id', input.id)
 
@@ -197,9 +253,13 @@ export async function actualizarAcademiaAdminAction(
 
     return { success: true }
   } catch (error) {
+    const message = parseError(error, 'No pudimos actualizar los datos de la academia.')
+
     return {
       success: false,
-      error: parseError(error, 'No pudimos actualizar los datos de la academia.'),
+      error: message.includes('dias_abiertos')
+        ? `${message}. Falta ejecutar la migracion de configuracion en Supabase.`
+        : message,
     }
   }
 }
@@ -249,6 +309,102 @@ export async function guardarClaseAdminAction(input: ClaseInput): Promise<Action
   }
 }
 
+export async function guardarClaseConImagenAdminAction(
+  formData: FormData
+): Promise<ActionResult> {
+  let uploadedImagePath: string | null = null
+
+  try {
+    const id = normalizarString(formData.get('id')?.toString())
+    const nombre = normalizarString(formData.get('nombre')?.toString())
+    const etiqueta = normalizarString(formData.get('etiqueta')?.toString())
+    const edades = normalizarString(formData.get('edades')?.toString())
+    const descripcion = normalizarString(formData.get('descripcion')?.toString())
+    const estadoInput = normalizarString(formData.get('estado')?.toString())
+    const imagenUrlActual = normalizarString(formData.get('imagen_url_actual')?.toString())
+    const removeCurrentImage =
+      normalizarString(formData.get('removeCurrentImage')?.toString()) === 'true'
+    const file = formData.get('imagen')
+    const estado = ESTADOS_CLASE_VALIDOS.has(estadoInput) ? estadoInput : 'activa'
+
+    if (!nombre || !etiqueta || !edades) {
+      return { success: false, error: 'Completa nombre, etiqueta y edades.' }
+    }
+
+    const { supabaseAdmin } = await getAdminContext()
+    let imagenUrl = removeCurrentImage ? '' : imagenUrlActual
+
+    if (file instanceof File && file.size > 0) {
+      if (!file.type.startsWith('image/')) {
+        return { success: false, error: 'Solo podes subir archivos de imagen.' }
+      }
+
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      uploadedImagePath = `${CLASES_STORAGE_PREFIX}${randomUUID()}.${extension}`
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('galeria')
+        .upload(uploadedImagePath, file, {
+          contentType: file.type,
+          upsert: false,
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from('galeria')
+        .getPublicUrl(uploadedImagePath)
+
+      imagenUrl = publicUrlData.publicUrl
+    }
+
+    const payload = {
+      nombre,
+      etiqueta,
+      edades,
+      descripcion: descripcion || null,
+      imagen_url: normalizarString(imagenUrl) || null,
+      estado,
+    }
+
+    if (id) {
+      const { error } = await supabaseAdmin.from('clases').update(payload).eq('id', id)
+
+      if (error) {
+        throw error
+      }
+    } else {
+      const { error } = await supabaseAdmin.from('clases').insert([payload])
+
+      if (error) {
+        throw error
+      }
+    }
+
+    if ((uploadedImagePath || removeCurrentImage) && imagenUrlActual) {
+      await removeManagedClassImage(supabaseAdmin, imagenUrlActual)
+    }
+
+    return { success: true }
+  } catch (error) {
+    try {
+      if (uploadedImagePath) {
+        const { supabaseAdmin } = await getAdminContext()
+        await supabaseAdmin.storage.from('galeria').remove([uploadedImagePath]).catch(() => undefined)
+      }
+    } catch {
+      // Ignore cleanup errors so the original failure reaches the UI.
+    }
+
+    return {
+      success: false,
+      error: parseError(error, 'No pudimos guardar la clase.'),
+    }
+  }
+}
+
 export async function eliminarClaseAdminAction(id: string): Promise<ActionResult> {
   try {
     if (!id) {
@@ -256,11 +412,24 @@ export async function eliminarClaseAdminAction(id: string): Promise<ActionResult
     }
 
     const { supabaseAdmin } = await getAdminContext()
+    const { data: claseExistente, error: fetchError } = await supabaseAdmin
+      .from('clases')
+      .select('imagen_url')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle<{ imagen_url: string | null }>()
+
+    if (fetchError) {
+      throw fetchError
+    }
+
     const { error } = await supabaseAdmin.from('clases').delete().eq('id', id)
 
     if (error) {
       throw error
     }
+
+    await removeManagedClassImage(supabaseAdmin, claseExistente?.imagen_url)
 
     return { success: true }
   } catch (error) {
@@ -289,6 +458,14 @@ export async function guardarHorarioAdminAction(
     }
 
     const { supabaseAdmin } = await getAdminContext()
+    const diasAbiertos = await obtenerDiasAbiertosAcademia(supabaseAdmin)
+
+    if (!isDiaAbierto(dia, diasAbiertos)) {
+      return {
+        success: false,
+        error: 'Ese dia no esta habilitado en la configuracion de la academia.',
+      }
+    }
 
     let duplicateQuery = supabaseAdmin
       .from('horarios')
@@ -401,10 +578,13 @@ export async function crearReservaAdminAction(
   input: ReservaInput
 ): Promise<ActionResult> {
   try {
-    const nombre = normalizarString(input.nombre)
+    let nombre = normalizarString(input.nombre)
+    let apellido = normalizarString(input.apellido)
+    let telefono = normalizarString(input.telefono)
     const disciplina = normalizarString(input.disciplina)
     const fecha = normalizarString(input.fecha)
     const horario = normalizarString(input.horario)
+    const perfilId = normalizarString(input.perfilId)
     const estado = ESTADOS_RESERVA_VALIDOS.has(input.estado) ? input.estado : 'pendiente'
 
     if (!nombre || !disciplina || !fecha || !horario) {
@@ -412,15 +592,43 @@ export async function crearReservaAdminAction(
     }
 
     const { supabaseAdmin } = await getAdminContext()
+
+    if (perfilId) {
+      const { data: perfil, error: perfilError } = await supabaseAdmin
+        .from('perfiles')
+        .select('id, nombre, apellido, telefono')
+        .eq('id', perfilId)
+        .limit(1)
+        .maybeSingle<{
+          id: string
+          nombre: string | null
+          apellido: string | null
+          telefono: string | null
+        }>()
+
+      if (perfilError) {
+        throw perfilError
+      }
+
+      if (!perfil) {
+        return { success: false, error: 'No encontramos el cliente seleccionado.' }
+      }
+
+      nombre = normalizarString(perfil.nombre) || nombre
+      apellido = normalizarString(perfil.apellido) || apellido
+      telefono = normalizarString(perfil.telefono) || telefono
+    }
+
     const { error } = await supabaseAdmin.from('reservas').insert([
       {
         nombre,
-        apellido: normalizarString(input.apellido),
-        telefono: normalizarString(input.telefono),
+        apellido,
+        telefono,
         disciplina,
         fecha,
         horario,
         estado,
+        perfil_id: perfilId || null,
       },
     ])
 
@@ -472,6 +680,12 @@ export async function crearPagoAdminAction(
     const mesPeriodo = Number.isNaN(fechaPagoDate.getTime())
       ? null
       : `${fechaPagoDate.getFullYear()}-${String(fechaPagoDate.getMonth() + 1).padStart(2, '0')}`
+    const mesLegacy = Number.isNaN(fechaPagoDate.getTime())
+      ? null
+      : fechaPagoDate.getMonth() + 1
+    const anioLegacy = Number.isNaN(fechaPagoDate.getTime())
+      ? null
+      : fechaPagoDate.getFullYear()
 
     if (!alumnaId || !fechaPago || !mesCorrespondiente || !metodoPago || Number.isNaN(monto) || monto <= 0) {
       return { success: false, error: 'Revisá los datos del pago antes de guardar.' }
@@ -503,6 +717,8 @@ export async function crearPagoAdminAction(
       {
         alumna_id: alumnaId,
         monto,
+        mes: mesLegacy,
+        anio: anioLegacy,
         fecha_pago: fechaPago,
         mes_correspondiente: mesCorrespondiente,
         mes_periodo: mesPeriodo,
@@ -636,7 +852,7 @@ export async function marcarAsistenciaProfesorAdminAction(
           presente: input.presente,
         })
         .eq('id', existente.id)
-        .select('id, profesor_id, fecha, presente, nota')
+        .select('id, profesor_id, fecha, presente')
         .single<AsistenciaRecord>()
 
       data = result.data
@@ -651,7 +867,7 @@ export async function marcarAsistenciaProfesorAdminAction(
             presente: input.presente,
           },
         ])
-        .select('id, profesor_id, fecha, presente, nota')
+        .select('id, profesor_id, fecha, presente')
         .single<AsistenciaRecord>()
 
       data = result.data

@@ -69,6 +69,22 @@ BEGIN
   END IF;
 END $$;
 
+-- 4.b COLUMNA dias_abiertos en academia_info
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'academia_info' AND column_name = 'dias_abiertos'
+  ) THEN
+    ALTER TABLE academia_info
+      ADD COLUMN dias_abiertos TEXT[] DEFAULT ARRAY['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  END IF;
+END $$;
+
+UPDATE academia_info
+SET dias_abiertos = ARRAY['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+WHERE dias_abiertos IS NULL OR array_length(dias_abiertos, 1) IS NULL;
+
 -- 5. COLUMNAS faltantes en pagos para el admin actual
 DO $$
 BEGIN
@@ -85,6 +101,20 @@ BEGIN
     WHERE table_name = 'pagos' AND column_name = 'mes_correspondiente'
   ) THEN
     ALTER TABLE pagos ADD COLUMN mes_correspondiente VARCHAR(50);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'mes'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN mes INTEGER;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pagos' AND column_name = 'anio'
+  ) THEN
+    ALTER TABLE pagos ADD COLUMN anio INTEGER;
   END IF;
 
   IF NOT EXISTS (
@@ -111,6 +141,14 @@ SET mes_correspondiente =
   EXTRACT(YEAR FROM fecha_pago)::TEXT || '-' ||
   LPAD(EXTRACT(MONTH FROM fecha_pago)::INT::TEXT, 2, '0')
 WHERE mes_correspondiente IS NULL;
+
+UPDATE pagos
+SET mes = EXTRACT(MONTH FROM fecha_pago)::INT
+WHERE mes IS NULL;
+
+UPDATE pagos
+SET anio = EXTRACT(YEAR FROM fecha_pago)::INT
+WHERE anio IS NULL;
 
 -- 6. COLUMNA mes_periodo en pagos (formato YYYY-MM para queries confiables)
 DO $$
@@ -193,6 +231,13 @@ BEGIN
     WHERE table_name = 'asistencia_profesores' AND column_name = 'presente'
   ) THEN
     ALTER TABLE asistencia_profesores ADD COLUMN presente BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asistencia_profesores' AND column_name = 'nota'
+  ) THEN
+    ALTER TABLE asistencia_profesores ADD COLUMN nota TEXT;
   END IF;
 END $$;
 

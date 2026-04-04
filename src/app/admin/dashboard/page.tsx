@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { isDiaAbierto, sanitizeDiasAbiertos } from "@/lib/academia";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { actualizarAdminDisplayNameAction } from "../actions";
@@ -94,14 +95,16 @@ export default function DashboardPage() {
           }
         }
 
-        const [resPerfiles, resReservas, resHorarios] = await Promise.all([
+        const [resPerfiles, resReservas, resHorarios, resAcademia] = await Promise.all([
           supabase.from('perfiles').select('*'),
           supabase.from('reservas').select('*'),
           supabase.from('horarios').select('id').eq('dia', nombreDiaHoy),
+          supabase.from('academia_info').select('*').single(),
         ]);
 
         const perfiles: PerfilDashboard[] = resPerfiles.data || [];
         const reservas: ReservaDashboard[] = resReservas.data || [];
+        const diasAbiertos = sanitizeDiasAbiertos(resAcademia.data?.dias_abiertos);
 
         // Cumpleaños
         const hoy = new Date();
@@ -134,7 +137,7 @@ export default function DashboardPage() {
           nuevas: perfiles.filter((p) => p.estado === 'nueva' || !p.estado).length,
           turnosPendientes: reservas.filter((r) => r.estado === 'pendiente').length,
           turnosTotal: reservas.length,
-          clasesHoy: resHorarios.data?.length || 0,
+          clasesHoy: isDiaAbierto(nombreDiaHoy, diasAbiertos) ? resHorarios.data?.length || 0 : 0,
         });
 
         // Próximos turnos

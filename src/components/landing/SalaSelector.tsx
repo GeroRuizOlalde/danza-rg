@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { isDiaAbierto, normalizarDia, sanitizeDiasAbiertos } from '@/lib/academia'
 
 type Celda = { clase: string; nivel: string | null } | null
 
@@ -14,19 +15,7 @@ type Horario = {
 
 type FilaHorario = {
   hs: number
-  lun: Celda
-  mar: Celda
-  mie: Celda
-  jue: Celda
-  vie: Celda
-}
-
-const CLAVES_DIA: Record<string, keyof Omit<FilaHorario, 'hs'>> = {
-  lunes: 'lun',
-  martes: 'mar',
-  miercoles: 'mie',
-  jueves: 'jue',
-  viernes: 'vie',
+  celdas: Celda[]
 }
 
 function CeldaHorario({ celda }: { celda: Celda }) {
@@ -36,7 +25,7 @@ function CeldaHorario({ celda }: { celda: Celda }) {
     <td>
       {celda.clase}
       {celda.nivel && (
-        <span className="nivel-badge nivel-inicio block mt-1">
+        <span className="nivel-badge nivel-inicio mt-1 block">
           {celda.nivel}
         </span>
       )}
@@ -44,52 +33,51 @@ function CeldaHorario({ celda }: { celda: Celda }) {
   )
 }
 
-export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
+export default function SalaSelector({
+  horarios,
+  diasAbiertos,
+}: {
+  horarios: Horario[]
+  diasAbiertos?: string[] | null
+}) {
   const [sala, setSala] = useState<1 | 2>(1)
 
-  const norm = (str: string) =>
-    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const diasVisibles = useMemo(
+    () => sanitizeDiasAbiertos(diasAbiertos),
+    [diasAbiertos]
+  )
 
   const grillaHoraria = useMemo(() => {
     const horas = [17, 18, 19, 20, 21]
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+    const horariosSala = horarios.filter(
+      (item) => item.sala === sala && isDiaAbierto(item.dia ?? '', diasVisibles)
+    )
 
-    return horas.map((hora) => {
-      const fila: FilaHorario = {
-        hs: hora,
-        lun: null,
-        mar: null,
-        mie: null,
-        jue: null,
-        vie: null,
-      }
-
-      dias.forEach((dia) => {
-        const coincidencia = horarios.find(
-          (item) => item.hora === hora && norm(item.dia ?? '') === norm(dia) && item.sala === sala
+    return horas.map((hora): FilaHorario => ({
+      hs: hora,
+      celdas: diasVisibles.map((dia) => {
+        const coincidencia = horariosSala.find(
+          (item) => item.hora === hora && normalizarDia(item.dia ?? '') === normalizarDia(dia)
         )
-        const clave = CLAVES_DIA[norm(dia)]
 
-        fila[clave] = coincidencia
+        return coincidencia
           ? { clase: coincidencia.clases?.nombre ?? 'Clase', nivel: coincidencia.nivel ?? null }
           : null
-      })
-
-      return fila
-    })
-  }, [horarios, sala])
+      }),
+    }))
+  }, [diasVisibles, horarios, sala])
 
   return (
     <>
-      <div className="flex gap-3 mb-8">
+      <div className="mb-8 flex gap-3">
         {([1, 2] as const).map((numero) => (
           <button
             key={numero}
             onClick={() => setSala(numero)}
-            className={`px-6 py-2 rounded-full cursor-pointer transition-all ${
+            className={`cursor-pointer rounded-full px-6 py-2 transition-all ${
               sala === numero
-                ? 'bg-[#C97A96] text-white border-none'
-                : 'bg-transparent text-white border-[1.5px] border-[#E8A0B4]/30'
+                ? 'border-none bg-[#C97A96] text-white'
+                : 'border-[1.5px] border-[#E8A0B4]/30 bg-transparent text-white'
             }`}
           >
             Sala {numero}
@@ -102,11 +90,9 @@ export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
           <thead>
             <tr>
               <th>Hs.</th>
-              <th>Lunes</th>
-              <th>Martes</th>
-              <th>Miércoles</th>
-              <th>Jueves</th>
-              <th>Viernes</th>
+              {diasVisibles.map((dia) => (
+                <th key={dia}>{dia}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -115,11 +101,9 @@ export default function SalaSelector({ horarios }: { horarios: Horario[] }) {
                 <td>
                   <strong className="text-[#E8A0B4]">{row.hs}</strong>
                 </td>
-                <CeldaHorario celda={row.lun} />
-                <CeldaHorario celda={row.mar} />
-                <CeldaHorario celda={row.mie} />
-                <CeldaHorario celda={row.jue} />
-                <CeldaHorario celda={row.vie} />
+                {row.celdas.map((celda, index) => (
+                  <CeldaHorario key={`${row.hs}-${diasVisibles[index]}`} celda={celda} />
+                ))}
               </tr>
             ))}
           </tbody>
