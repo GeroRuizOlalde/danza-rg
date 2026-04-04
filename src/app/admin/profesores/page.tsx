@@ -277,7 +277,7 @@ export default function ProfesoresPage() {
     <div className="font-dm-sans min-h-screen">
 
       {/* ── HEADER ── */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-playfair text-[1.8rem] font-semibold text-[#1A1A22]">
             Profesores <em className="italic text-[#C97A96]">& Asistencia</em>
@@ -287,7 +287,7 @@ export default function ProfesoresPage() {
             {sinRegistrarHoy > 0 && ` · ${sinRegistrarHoy} sin registrar`}
           </p>
         </div>
-        <button onClick={abrirNuevo} className="bg-[#C97A96] text-white rounded-full px-5 py-2.5 text-[0.82rem] font-semibold hover:bg-[#1A1A22] transition-all shadow-md">
+        <button onClick={abrirNuevo} className="rounded-full bg-[#C97A96] px-5 py-2.5 text-[0.82rem] font-semibold text-white shadow-md transition-all hover:bg-[#1A1A22] sm:w-auto">
           + Nuevo profesor
         </button>
       </div>
@@ -305,7 +305,7 @@ export default function ProfesoresPage() {
       )}
 
       {/* ── TABS ── */}
-      <div className="flex gap-1 mb-6 bg-[#F7F7F9] p-1 rounded-2xl w-fit border border-[#E8A0B4]/15">
+      <div className="mb-6 flex w-full gap-1 overflow-x-auto rounded-2xl border border-[#E8A0B4]/15 bg-[#F7F7F9] p-1">
         {([
           { id: "hoy",       label: "📋 Asistencia de Hoy" },
           { id: "historial", label: "📊 Historial" },
@@ -337,7 +337,7 @@ export default function ProfesoresPage() {
           ) : (
             <>
               {/* Resumen rápido */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[
                   { label: "Presentes", valor: presentesHoy,    color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
                   { label: "Ausentes",  valor: ausentesHoy,     color: "text-red-500",     bg: "bg-red-50",     border: "border-red-100"     },
@@ -359,7 +359,7 @@ export default function ProfesoresPage() {
                   return (
                     <div
                       key={p.id}
-                      className={`flex items-center gap-4 px-5 py-4 transition-colors ${
+                      className={`flex flex-wrap items-start gap-3 px-4 py-4 transition-colors sm:flex-nowrap sm:items-center sm:px-5 ${
                         idx < activos.length - 1 ? "border-b border-gray-50" : ""
                       } ${
                         estado === true  ? "bg-emerald-50/40" :
@@ -404,7 +404,7 @@ export default function ProfesoresPage() {
                       </div>
 
                       {/* Botones */}
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
                         <button
                           disabled={loading || estado === true}
                           onClick={() => marcarAsistencia(p.id, true)}
@@ -700,7 +700,7 @@ export default function ProfesoresPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                             {[
                               { label: "Presentes",    valor: stats.presentes,    color: "text-emerald-600", bg: "bg-emerald-50" },
                               { label: "Ausentes",     valor: stats.ausentes,     color: "text-red-500",     bg: "bg-red-50"     },
@@ -892,9 +892,9 @@ export default function ProfesoresPage() {
           ) : profesores.length === 0 ? (
             <EmptyState mensaje="Todavía no hay profesores." onAgregar={abrirNuevo} />
           ) : (
-            <div className="bg-white border border-[#E8A0B4]/20 rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-[#E8A0B4]/20 bg-white shadow-sm">
               {/* Header */}
-              <div className="grid grid-cols-[44px_1fr_180px_80px_100px] px-5 py-3 bg-[#F7F7F9] border-b border-[#E8A0B4]/20">
+              <div className="grid min-w-[560px] grid-cols-[44px_1fr_180px_80px_100px] border-b border-[#E8A0B4]/20 bg-[#F7F7F9] px-5 py-3">
                 <div />
                 {["Profesor", "Disciplina", "Estado", "Acciones"].map(h => (
                   <div key={h} className="text-[0.65rem] font-black uppercase tracking-[1.5px] text-[#8A8A99]">{h}</div>
@@ -905,7 +905,7 @@ export default function ProfesoresPage() {
               {profesores.map((p, idx) => (
                 <div
                   key={p.id}
-                  className={`grid grid-cols-[44px_1fr_180px_80px_100px] items-center px-5 py-3.5 transition-colors hover:bg-[#FDF0F4]/20 ${
+                  className={`grid min-w-[560px] grid-cols-[44px_1fr_180px_80px_100px] items-center px-5 py-3.5 transition-colors hover:bg-[#FDF0F4]/20 ${
                     idx < profesores.length - 1 ? "border-b border-gray-50" : ""
                   } ${!p.activo ? "opacity-50" : ""}`}
                 >
@@ -957,15 +957,15 @@ export default function ProfesoresPage() {
       {/* ── MODAL: CREAR / EDITAR ── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
+          <div className="max-h-[90vh] w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
               <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">
                 {editando ? "Editar profesor" : "Nuevo profesor"}
               </h3>
               <button type="button" onClick={() => setModalOpen(false)} className="text-[#C97A96] hover:text-[#1A1A22] text-xl">✕</button>
             </div>
-            <form onSubmit={handleGuardar} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleGuardar} className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.7rem] font-bold text-[#8A8A99] uppercase tracking-wide mb-1">Nombre *</label>
                   <input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})}

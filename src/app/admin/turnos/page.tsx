@@ -355,7 +355,7 @@ export default function TurnosPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-7">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-playfair text-[1.6rem] font-semibold text-[#1A1A22]">
             Gestión de <em className="italic text-[#C97A96]">Turnos</em>
@@ -370,13 +370,13 @@ export default function TurnosPage() {
             resetNuevoTurno();
             setIsModalOpen(true);
           }}
-          className="inline-flex items-center gap-2 bg-[#C97A96] text-white rounded-full px-5 py-2.5 text-[0.82rem] font-semibold hover:bg-[#1A1A22] transition-all shadow-md shadow-[#C97A96]/20"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#C97A96] px-5 py-2.5 text-[0.82rem] font-semibold text-white shadow-md shadow-[#C97A96]/20 transition-all hover:bg-[#1A1A22] sm:w-auto"
         >
           + Nuevo turno
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           {
             label: "Pendientes",
@@ -409,13 +409,13 @@ export default function TurnosPage() {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2.5 mb-6 items-center">
+      <div className="mb-6 flex gap-2.5 overflow-x-auto pb-2">
         {FILTROS.map((filtro) => (
           <button
             key={filtro}
             type="button"
             onClick={() => setFiltroActivo(filtro)}
-            className={`px-4 py-1.5 rounded-full border-[1.5px] text-[0.8rem] font-medium transition-all ${
+            className={`whitespace-nowrap rounded-full border-[1.5px] px-4 py-1.5 text-[0.8rem] font-medium transition-all ${
               filtroActivo === filtro
                 ? "bg-[#C97A96] text-white border-[#C97A96]"
                 : "bg-transparent border-[#E8A0B4]/20 text-[#4A4A55] hover:border-[#C97A96] hover:text-[#C97A96]"
@@ -598,7 +598,7 @@ export default function TurnosPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
               <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">
                 Nuevo Turno
@@ -611,7 +611,7 @@ export default function TurnosPage() {
                 ✕
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-4">
               <div className="rounded-2xl border border-[#E8A0B4]/20 bg-[#FDF0F4]/40 p-4">
                 <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                   Cuenta existente en clientes
@@ -644,7 +644,7 @@ export default function TurnosPage() {
                   </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                     Nombre *
@@ -711,7 +711,7 @@ export default function TurnosPage() {
                   <option value="Asesoramiento">Asesoramiento / Sin definir</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                     Fecha *

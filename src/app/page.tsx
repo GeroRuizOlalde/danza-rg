@@ -100,7 +100,7 @@ export default async function HomePage() {
         />
         <div className="absolute inset-0 bg-[#1A1A22]/55" />
 
-        <div className="relative z-10 text-center px-6 max-w-3xl animate-[fadeUp_0.9s_ease_both]">
+        <div className="relative z-10 max-w-3xl px-6 pb-28 pt-24 text-center animate-[fadeUp_0.9s_ease_both] md:pb-10">
           <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm text-white px-5 py-2 rounded-full text-xs font-medium tracking-[2px] uppercase mb-8 border border-white/20">
             Academia de Danza
           </div>
@@ -130,9 +130,15 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-lg px-6 py-3.5 rounded-full border border-[#E8A0B4]/30 shadow-lg z-10">
-          <span className="text-xs text-[#8A8A99]">Proximo inicio de ciclo - </span>
-          <strong className="text-sm text-[#1A1A22]">Abril 2026 - Inscripciones abiertas</strong>
+        <div className="absolute bottom-5 left-4 right-4 z-10 sm:left-1/2 sm:right-auto sm:w-auto sm:-translate-x-1/2">
+          <div className="mx-auto max-w-sm rounded-[24px] border border-[#E8A0B4]/30 bg-white/92 px-5 py-3.5 text-center shadow-lg backdrop-blur-lg sm:max-w-none sm:rounded-full sm:px-6">
+            <span className="block text-[0.68rem] uppercase tracking-[1.6px] text-[#8A8A99] sm:inline sm:text-xs sm:tracking-normal sm:normal-case">
+              Proximo inicio de ciclo
+            </span>
+            <strong className="mt-1 block text-sm text-[#1A1A22] sm:mt-0 sm:ml-1 sm:inline">
+              Abril 2026 - Inscripciones abiertas
+            </strong>
+          </div>
         </div>
       </section>
 

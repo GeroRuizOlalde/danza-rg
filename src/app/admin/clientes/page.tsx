@@ -720,7 +720,7 @@ export default function ClientesPage() {
       {/* ══════════ MODAL: EDITAR ALUMNA ══════════ */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-md p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-[#E8A0B4]/20">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[#E8A0B4]/20 bg-white shadow-2xl">
             <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
               <div>
                 <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">Editar Alumna</h3>
@@ -728,8 +728,8 @@ export default function ClientesPage() {
               </div>
               <button onClick={() => setIsEditModalOpen(false)} className="text-[#C97A96] hover:text-[#1A1A22] text-xl transition-colors">✕</button>
             </div>
-            <form onSubmit={handleGuardarEdicion} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleGuardarEdicion} className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Nombre *</label>
                   <input
@@ -749,7 +749,7 @@ export default function ClientesPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Teléfono</label>
                   <input
@@ -769,7 +769,7 @@ export default function ClientesPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-1.5">Fecha de Nacimiento</label>
                   <input
@@ -889,7 +889,7 @@ export default function ClientesPage() {
       {/* ══════════ MODAL: REGISTRAR PAGO ══════════ */}
       {isPagoModalOpen && alumnaParaPago && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-md p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
               <div>
                 <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">Registrar Pago</h3>
@@ -897,8 +897,8 @@ export default function ClientesPage() {
               </div>
               <button onClick={() => setIsPagoModalOpen(false)} className="text-[#C97A96] hover:text-[#1A1A22] text-xl transition-colors">✕</button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">Monto ($) *</label>
                   <input
@@ -919,7 +919,7 @@ export default function ClientesPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">Fecha pago *</label>
                   <input

@@ -332,7 +332,7 @@ export default function PagosPage() {
       {/* MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A22]/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="bg-[#FDF0F4] px-6 py-5 border-b border-[#E8A0B4]/20 flex justify-between items-center">
               <h3 className="font-playfair text-xl font-semibold text-[#1A1A22]">
                 Registrar Pago
@@ -344,7 +344,7 @@ export default function PagosPage() {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleGuardar} className="p-6 space-y-4">
+            <form onSubmit={handleGuardar} className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-4">
               <div>
                 <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                   Alumna *
@@ -364,7 +364,7 @@ export default function PagosPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                     Monto ($) *
@@ -395,7 +395,7 @@ export default function PagosPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-[0.8rem] font-medium text-[#4A4A55] mb-1.5">
                     Fecha de pago *
