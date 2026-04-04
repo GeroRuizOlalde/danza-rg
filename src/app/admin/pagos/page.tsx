@@ -54,16 +54,27 @@ export default function PagosPage() {
 
   async function fetchData() {
     setCargando(true);
-    const [{ data: pagosData }, { data: perfilesData }] = await Promise.all([
+    const [{ data: pagosData, error: pagosError }, { data: perfilesData, error: perfilesError }] = await Promise.all([
       supabase
         .from("pagos")
-        .select("*, perfiles(nombre, apellido)")
+        .select("*, perfiles!pagos_alumna_id_fkey(nombre, apellido)")
         .order("fecha_pago", { ascending: false }),
       supabase
         .from("perfiles")
         .select("id, nombre, apellido")
         .order("nombre"),
     ]);
+
+    if (pagosError) {
+      console.error("Error cargando pagos:", pagosError);
+      toast.error("No pudimos cargar los pagos.");
+    }
+
+    if (perfilesError) {
+      console.error("Error cargando perfiles para pagos:", perfilesError);
+      toast.error("No pudimos cargar las alumnas para pagos.");
+    }
+
     if (pagosData) setPagos(pagosData);
     if (perfilesData) setPerfiles(perfilesData);
     setCargando(false);
