@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { DEFAULT_CLASS_IMAGE, resolveClassImageUrl } from "@/lib/images";
 import toast from "react-hot-toast";
 import {
   eliminarClaseAdminAction,
@@ -38,10 +39,10 @@ const EMPTY_FORM: ClaseFormState = {
 };
 
 function ClasePreview({ src, alt }: { src: string; alt: string }) {
-  const [imageSrc, setImageSrc] = useState(src);
+  const [imageSrc, setImageSrc] = useState(resolveClassImageUrl(src));
 
   useEffect(() => {
-    setImageSrc(src);
+    setImageSrc(resolveClassImageUrl(src));
   }, [src]);
 
   return (
@@ -51,11 +52,7 @@ function ClasePreview({ src, alt }: { src: string; alt: string }) {
       fill
       sizes="(max-width: 768px) 100vw, 33vw"
       className="h-full w-full object-cover"
-      onError={() =>
-        setImageSrc(
-          "https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&q=80"
-        )
-      }
+      onError={() => setImageSrc(DEFAULT_CLASS_IMAGE)}
     />
   );
 }

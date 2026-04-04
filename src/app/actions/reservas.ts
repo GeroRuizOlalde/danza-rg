@@ -53,6 +53,21 @@ type CrearReservaRpcInput = {
   estado?: string
 }
 
+function parseReservationError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) {
+      return message
+    }
+  }
+
+  return fallback
+}
+
 async function obtenerDiasAbiertosAcademia(supabaseAdmin: SupabaseClient) {
   const { data, error } = await supabaseAdmin
     .from('academia_info')
@@ -92,7 +107,7 @@ async function crearReservaAtomica(input: CrearReservaRpcInput): Promise<Reserva
   })
 
   if (error) {
-    throw error
+    throw new Error(parseReservationError(error, 'No pudimos guardar la reserva.'))
   }
 
   return { success: true }
@@ -201,10 +216,10 @@ export async function crearReservaLandingAction(
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'No pudimos registrar la consulta. Intentá nuevamente.',
+      error: parseReservationError(
+        error,
+        'No pudimos registrar la consulta. Intentá nuevamente.'
+      ),
     }
   }
 }
@@ -228,10 +243,10 @@ export async function crearReservaTurneroAction(
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'No pudimos guardar la reserva. Intentá nuevamente.',
+      error: parseReservationError(
+        error,
+        'No pudimos guardar la reserva. Intentá nuevamente.'
+      ),
     }
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { DEFAULT_CLASS_IMAGE, resolveClassImageUrl } from '@/lib/images'
 
 type ClaseProcesada = {
   id: string
@@ -13,8 +14,6 @@ type ClaseProcesada = {
   imagen_url: string
   horariosFormateados: string[]
 }
-
-const FALLBACK = 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&q=80'
 
 const FILTROS = [
   { id: 'all', label: 'Todas' },
@@ -33,7 +32,7 @@ function normalizarTexto(value: string) {
 }
 
 function ClaseImagen({ src, alt }: { src: string; alt: string }) {
-  const [imageSrc, setImageSrc] = useState(src || FALLBACK)
+  const [imageSrc, setImageSrc] = useState(resolveClassImageUrl(src))
 
   return (
     <Image
@@ -42,7 +41,7 @@ function ClaseImagen({ src, alt }: { src: string; alt: string }) {
       fill
       sizes="(max-width: 768px) 100vw, 380px"
       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-      onError={() => setImageSrc(FALLBACK)}
+      onError={() => setImageSrc(DEFAULT_CLASS_IMAGE)}
     />
   )
 }
