@@ -868,6 +868,30 @@ export async function toggleProfesorActivoAdminAction(
   }
 }
 
+export async function eliminarProfesorAdminAction(
+  profesorId: string
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    if (!profesorId) {
+      return { success: false, error: 'Profesor invalido.' }
+    }
+
+    const { supabaseAdmin } = await getAdminContext()
+    const { error } = await supabaseAdmin.from('profesores').delete().eq('id', profesorId)
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true, data: { id: profesorId } }
+  } catch (error) {
+    return {
+      success: false,
+      error: parseError(error, 'No pudimos eliminar el profesor.'),
+    }
+  }
+}
+
 export async function marcarAsistenciaProfesorAdminAction(
   input: AsistenciaInput
 ): Promise<ActionResult<AsistenciaRecord>> {

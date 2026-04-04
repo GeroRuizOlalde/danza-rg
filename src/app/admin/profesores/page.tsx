@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import {
   guardarProfesorAdminAction,
+  eliminarProfesorAdminAction,
   marcarAsistenciaProfesorAdminAction,
   toggleProfesorActivoAdminAction,
 } from "../actions";
@@ -81,6 +82,7 @@ export default function ProfesoresPage() {
   const [editando, setEditando] = useState<Profesor | null>(null);
   const [form, setForm] = useState<FormState>({ nombre:"",apellido:"",telefono:"",disciplina:"",activo:true });
   const [guardando, setGuardando] = useState(false);
+  const [eliminandoProfesorId, setEliminandoProfesorId] = useState<string | null>(null);
   const [loadingBtn, setLoadingBtn] = useState<string | null>(null);
 
   // ── Carga ──────────────────────────────────────────────────
@@ -253,6 +255,41 @@ export default function ProfesoresPage() {
       toast.error("Error: " + (error instanceof Error ? error.message : "No pudimos guardar el profesor."));
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleEliminarProfesor = async () => {
+    if (!editando?.id) return;
+
+    const nombreCompleto = `${editando.nombre} ${editando.apellido}`.trim();
+    const confirmar = window.confirm(
+      `Se va a eliminar a ${nombreCompleto || "este profesor"} y tambien su historial de asistencia. Esta accion no se puede deshacer.`
+    );
+
+    if (!confirmar) return;
+
+    setEliminandoProfesorId(editando.id);
+    try {
+      const result = await eliminarProfesorAdminAction(editando.id);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setProfesores((prev) => prev.filter((item) => item.id !== editando.id));
+      setAsistencias((prev) => prev.filter((item) => item.profesor_id !== editando.id));
+
+      if (profesorSeleccionado === editando.id) {
+        setProfesorSeleccionado(null);
+      }
+
+      setModalOpen(false);
+      setEditando(null);
+      toast.success("Profesor eliminado.");
+    } catch (error) {
+      toast.error("Error: " + (error instanceof Error ? error.message : "No pudimos eliminar el profesor."));
+    } finally {
+      setEliminandoProfesorId(null);
     }
   };
 
@@ -992,11 +1029,22 @@ export default function ProfesoresPage() {
                 <span className="text-sm text-[#4A4A55] font-medium">Profesor activo</span>
               </label>
               <div className="flex gap-3 pt-1">
+                {editando && (
+                  <button
+                    type="button"
+                    onClick={handleEliminarProfesor}
+                    disabled={guardando || eliminandoProfesorId === editando.id}
+                    className="bg-red-50 text-red-600 py-3 px-4 rounded-xl font-semibold text-sm hover:bg-red-100 transition-all disabled:opacity-50"
+                  >
+                    {eliminandoProfesorId === editando.id ? "Eliminando..." : "Eliminar"}
+                  </button>
+                )}
                 <button type="button" onClick={() => setModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-all">
+                  disabled={guardando || Boolean(eliminandoProfesorId)}
+                  className="flex-1 bg-gray-100 text-[#8A8A99] py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-all disabled:opacity-50">
                   Cancelar
                 </button>
-                <button type="submit" disabled={guardando}
+                <button type="submit" disabled={guardando || Boolean(eliminandoProfesorId)}
                   className="flex-[2] bg-[#C97A96] text-white py-3 rounded-xl font-semibold text-sm hover:bg-[#1A1A22] transition-all shadow-md disabled:opacity-50">
                   {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Crear profesor"}
                 </button>
