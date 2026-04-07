@@ -24,7 +24,7 @@ export default function ActivarCuentaPage() {
       // Establecer la sesión con el token de invitación
       supabase.auth
         .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
+        .then(({ error }: { error: { message: string } | null }) => {
           if (error) {
             setErrorMsg("El link de invitación no es válido o ya expiró.");
             setStep("error");
@@ -67,10 +67,10 @@ export default function ActivarCuentaPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A22] to-[#2A1F2E] p-4">
-      <div className="bg-white/5 border border-[#E8A0B4]/15 rounded-3xl p-10 w-full max-w-[400px] backdrop-blur-md">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-negro to-[#2A1F2E] p-4">
+      <div className="bg-white/5 border border-rosa/15 rounded-3xl p-10 w-full max-w-100 backdrop-blur-md">
         <div className="font-playfair text-3xl font-semibold text-white text-center mb-1">
-          R.G <span className="text-[#E8A0B4]">Danza</span>
+          R.G <span className="text-rosa">Danza</span>
         </div>
         <div className="text-center text-sm text-white/35 mb-8 tracking-wide">
           Panel de administración
@@ -95,7 +95,7 @@ export default function ActivarCuentaPage() {
                 placeholder="Nueva contraseña (mín. 8 caracteres)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-[#E8A0B4]/50"
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
               />
               <input
                 type="password"
@@ -103,7 +103,7 @@ export default function ActivarCuentaPage() {
                 placeholder="Repetir contraseña"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-[#E8A0B4]/50"
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
               />
               {errorMsg && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl text-center">
@@ -113,7 +113,7 @@ export default function ActivarCuentaPage() {
               <button
                 type="submit"
                 disabled={guardando}
-                className="w-full bg-[#C97A96] text-white rounded-full py-3.5 text-sm font-semibold hover:bg-[#4A4A55] transition-colors disabled:opacity-50"
+                className="w-full bg-rosa-d text-white rounded-full py-3.5 text-sm font-semibold hover:bg-gris transition-colors disabled:opacity-50"
               >
                 {guardando ? "Guardando..." : "Activar cuenta"}
               </button>
@@ -136,7 +136,7 @@ export default function ActivarCuentaPage() {
             <p className="text-white/40 text-sm mb-6">{errorMsg}</p>
             <a
               href="/admin/login"
-              className="text-[#E8A0B4] text-sm hover:underline"
+              className="text-rosa text-sm hover:underline"
             >
               Ir al login
             </a>
