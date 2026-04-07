@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,10 +28,13 @@ export default function LoginPage() {
       // Establecer sesión con el token de invitación y mostrar form de contraseña
       supabase.auth
         .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error: sessionError }: { error: { message: string } | null }) => {
+        .then(async ({ error: sessionError }: { error: { message: string } | null }) => {
           if (sessionError) {
             setError("El link de invitación no es válido o ya expiró.");
           } else {
+            // Guardar el email para hacer sign in después de crear contraseña
+            const { data: userData } = await supabase.auth.getUser();
+            if (userData.user?.email) setInviteEmail(userData.user.email);
             // Limpiar hash de la URL sin recargar la página
             window.history.replaceState(null, "", window.location.pathname);
             setMode("set-password");
@@ -84,6 +88,11 @@ export default function LoginPage() {
       setError(updateError.message);
       setLoading(false);
       return;
+    }
+
+    // Hacer sign in con la contraseña nueva para tener sesión limpia
+    if (inviteEmail) {
+      await supabase.auth.signInWithPassword({ email: inviteEmail, password: newPassword });
     }
 
     setMode("success");
