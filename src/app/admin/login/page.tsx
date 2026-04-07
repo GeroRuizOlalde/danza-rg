@@ -27,7 +27,7 @@ export default function LoginPage() {
       // Establecer sesión con el token de invitación y mostrar form de contraseña
       supabase.auth
         .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error: sessionError }) => {
+        .then(({ error: sessionError }: { error: { message: string } | null }) => {
           if (sessionError) {
             setError("El link de invitación no es válido o ya expiró.");
           } else {
