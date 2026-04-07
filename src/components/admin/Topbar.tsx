@@ -83,8 +83,8 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <div className="sticky top-0 z-30 border-b border-[#E8A0B4]/20 bg-[#F7F7F9]/90 backdrop-blur-md">
-      <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 md:px-8 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 items-center gap-3 lg:flex-1">
+      <div className="flex items-center gap-3 px-4 py-3 sm:px-6 md:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
             onClick={onMenuClick}
@@ -102,13 +102,13 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             <div className="truncate text-sm font-semibold text-[#1A1A22] sm:text-base">
               {title}
             </div>
-            <div className="text-[0.7rem] text-[#8A8A99] sm:text-[0.72rem]">
+            <div className="hidden text-[0.7rem] text-gris-l sm:block sm:text-[0.72rem]">
               Panel de administracion
             </div>
           </div>
         </div>
 
-        <div className="order-3 w-full lg:order-2 lg:w-[260px] lg:shrink-0">
+        <div className="hidden w-65 shrink-0 lg:block">
           <div className="flex items-center gap-2 rounded-full border border-[#E8A0B4]/20 bg-white px-4 py-2 transition-all focus-within:border-[#C97A96] focus-within:shadow-[0_0_0_3px_rgba(201,122,150,0.1)]">
             <svg
               aria-hidden="true"
@@ -132,7 +132,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           </div>
         </div>
 
-        <div className="order-2 flex items-center justify-end gap-2 sm:gap-3 lg:order-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div ref={notifRef} className="relative">
             <button
               onClick={() => {

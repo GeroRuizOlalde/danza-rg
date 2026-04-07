@@ -23,9 +23,9 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const userRole = user?.app_metadata?.role || user?.user_metadata?.role
-  const isAdminUser = userRole === 'admin'
+  const isAdminUser = userRole === 'admin' || userRole === 'secretaria'
   const profileHref = isAdminUser ? '/admin/dashboard' : '/perfil'
-  const profileLabel = isAdminUser ? 'Dashboard' : 'Mi perfil'
+  const profileLabel = isAdminUser ? 'Panel admin' : 'Mi perfil'
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -174,8 +174,8 @@ export default function Navbar() {
       </button>
 
       <div
-        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-[#FFF9FB]/98 backdrop-blur-xl transition-transform duration-300 md:hidden ${
-          menuOpen ? 'translate-y-0' : 'pointer-events-none -translate-y-4 opacity-0'
+        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-[#FFF9FB]/98 backdrop-blur-xl transition-all duration-300 md:hidden ${
+          menuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
         }`}
       >
         <div className="mx-auto flex h-full max-w-[520px] flex-col overflow-y-auto px-5 pb-8 pt-5">
