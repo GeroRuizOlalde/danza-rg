@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [permisosSecretaria, setPermisosSecretaria] = useState<string[]>(PERMISOS_DEFAULT_SECRETARIA)
-  const isLogin = pathname === '/admin/login'
+  const isLogin = pathname === '/admin/login' || pathname === '/admin/activar'
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : ''

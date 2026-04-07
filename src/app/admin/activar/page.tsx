@@ -1,0 +1,148 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Step = "loading" | "set-password" | "success" | "error";
+
+export default function ActivarCuentaPage() {
+  const [step, setStep] = useState<Step>("loading");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    // Supabase pone el token en el hash: #access_token=...&type=invite
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", ""));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (type === "invite" && accessToken && refreshToken) {
+      // Establecer la sesión con el token de invitación
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) {
+            setErrorMsg("El link de invitación no es válido o ya expiró.");
+            setStep("error");
+          } else {
+            setStep("set-password");
+          }
+        });
+    } else {
+      setErrorMsg("No se encontró un token de invitación válido en la URL.");
+      setStep("error");
+    }
+  }, []);
+
+  const handleGuardar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (password.length < 8) {
+      setErrorMsg("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (password !== confirm) {
+      setErrorMsg("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setGuardando(true);
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setGuardando(false);
+      return;
+    }
+
+    setStep("success");
+    setTimeout(() => {
+      window.location.href = "/admin/dashboard";
+    }, 2000);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A22] to-[#2A1F2E] p-4">
+      <div className="bg-white/5 border border-[#E8A0B4]/15 rounded-3xl p-10 w-full max-w-[400px] backdrop-blur-md">
+        <div className="font-playfair text-3xl font-semibold text-white text-center mb-1">
+          R.G <span className="text-[#E8A0B4]">Danza</span>
+        </div>
+        <div className="text-center text-sm text-white/35 mb-8 tracking-wide">
+          Panel de administración
+        </div>
+
+        {step === "loading" && (
+          <p className="text-center text-white/50 text-sm">Verificando invitación...</p>
+        )}
+
+        {step === "set-password" && (
+          <>
+            <h2 className="text-white font-semibold text-lg text-center mb-1">
+              Activar cuenta
+            </h2>
+            <p className="text-white/40 text-sm text-center mb-6">
+              Elegí una contraseña para acceder al panel.
+            </p>
+            <form onSubmit={handleGuardar} className="space-y-4">
+              <input
+                type="password"
+                required
+                placeholder="Nueva contraseña (mín. 8 caracteres)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-[#E8A0B4]/50"
+              />
+              <input
+                type="password"
+                required
+                placeholder="Repetir contraseña"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-[#E8A0B4]/50"
+              />
+              {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl text-center">
+                  {errorMsg}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={guardando}
+                className="w-full bg-[#C97A96] text-white rounded-full py-3.5 text-sm font-semibold hover:bg-[#4A4A55] transition-colors disabled:opacity-50"
+              >
+                {guardando ? "Guardando..." : "Activar cuenta"}
+              </button>
+            </form>
+          </>
+        )}
+
+        {step === "success" && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">✓</div>
+            <p className="text-white font-semibold text-lg mb-1">¡Cuenta activada!</p>
+            <p className="text-white/40 text-sm">Redirigiendo al panel...</p>
+          </div>
+        )}
+
+        {step === "error" && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">✕</div>
+            <p className="text-white font-semibold mb-2">Link inválido</p>
+            <p className="text-white/40 text-sm mb-6">{errorMsg}</p>
+            <a
+              href="/admin/login"
+              className="text-[#E8A0B4] text-sm hover:underline"
+            >
+              Ir al login
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
