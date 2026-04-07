@@ -7,7 +7,10 @@ import {
   invitarUsuarioSistemaAction,
   cambiarRolUsuarioAction,
   eliminarUsuarioSistemaAction,
+  getPermisosSecretariaAction,
+  actualizarPermisosSecretariaAction,
 } from "./actions";
+import { SECCIONES_PANEL } from "@/lib/permisos";
 
 type UsuarioSistema = {
   id: string;
@@ -42,9 +45,36 @@ export default function EquipoPage() {
   // Confirmar eliminación
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
+  // Permisos secretaria
+  const [permisos, setPermisos] = useState<string[]>([]);
+  const [guardandoPermisos, setGuardandoPermisos] = useState(false);
+
   useEffect(() => {
     void cargarUsuarios();
+    void cargarPermisos();
   }, []);
+
+  async function cargarPermisos() {
+    const result = await getPermisosSecretariaAction();
+    if (result.success) setPermisos(result.data);
+  }
+
+  const togglePermiso = (key: string) => {
+    setPermisos((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+    );
+  };
+
+  const handleGuardarPermisos = async () => {
+    setGuardandoPermisos(true);
+    const result = await actualizarPermisosSecretariaAction(permisos);
+    if (result.success) {
+      toast.success("Permisos guardados.");
+    } else {
+      toast.error(result.error);
+    }
+    setGuardandoPermisos(false);
+  };
 
   async function cargarUsuarios() {
     setCargando(true);
@@ -205,7 +235,69 @@ export default function EquipoPage() {
 
       <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl px-5 py-4 text-xs text-amber-700 leading-relaxed">
         <strong>Roles:</strong> <em>Administrador</em> tiene acceso completo al panel.{" "}
-        <em>Secretaria</em> puede ver y gestionar turnos y alumnas, pero no puede modificar la configuración del sistema ni gestionar usuarios.
+        <em>Secretaria</em> solo accede a las secciones que habilites abajo.
+      </div>
+
+      {/* Permisos secretaria */}
+      <div className="mt-8">
+        <div className="mb-4">
+          <h2 className="font-playfair text-xl font-semibold text-negro">Permisos de Secretaria</h2>
+          <p className="text-gris-l text-sm mt-0.5">
+            Activá o desactivá el acceso a cada sección para el rol secretaria.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+          {SECCIONES_PANEL.map((seccion) => {
+            const activo = !seccion.soloAdmin && permisos.includes(seccion.key);
+            const bloqueado = seccion.soloAdmin;
+            return (
+              <div key={seccion.key} className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p className={`text-sm font-medium ${bloqueado ? "text-gray-300" : "text-negro"}`}>
+                    {seccion.nombre}
+                    {bloqueado && (
+                      <span className="ml-2 text-[0.65rem] font-bold uppercase tracking-widest text-gray-300">
+                        Solo admin
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gris-l">{seccion.path}</p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={bloqueado}
+                  onClick={() => !bloqueado && togglePermiso(seccion.key)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    bloqueado
+                      ? "cursor-not-allowed bg-gray-100"
+                      : activo
+                      ? "bg-rosa-d"
+                      : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                      activo && !bloqueado ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={handleGuardarPermisos}
+            disabled={guardandoPermisos}
+            className="bg-rosa-d text-white px-8 py-2.5 rounded-full font-semibold text-sm hover:bg-negro transition-colors disabled:opacity-50"
+          >
+            {guardandoPermisos ? "Guardando..." : "Guardar permisos"}
+          </button>
+        </div>
       </div>
 
       {/* Modal invitar */}

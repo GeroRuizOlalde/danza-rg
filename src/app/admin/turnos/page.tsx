@@ -182,6 +182,7 @@ export default function TurnosPage() {
       const { data, error } = await supabase
         .from("reservas")
         .select("*")
+        .neq("origen", "landing")
         .order("fecha", { ascending: true })
         .order("horario", { ascending: true });
 

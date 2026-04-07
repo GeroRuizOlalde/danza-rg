@@ -3,6 +3,47 @@
 import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
 import { createAdminSupabase, requireAdminUser } from '@/lib/supabase-server'
 
+export async function getPermisosSecretariaAction(): Promise<
+  { success: true; data: string[] } | { success: false; error: string }
+> {
+  try {
+    const supabaseAdmin = createAdminSupabase()
+    if (!supabaseAdmin) throw new Error(missingSupabaseServiceEnvMessage)
+    await requireAdminUser()
+
+    const { data, error } = await supabaseAdmin
+      .from('academia_info')
+      .select('permisos_secretaria')
+      .limit(1)
+      .maybeSingle<{ permisos_secretaria: string[] | null }>()
+
+    if (error) throw error
+    return { success: true, data: data?.permisos_secretaria ?? ['dashboard', 'turnos', 'clientes'] }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Error al cargar permisos.' }
+  }
+}
+
+export async function actualizarPermisosSecretariaAction(
+  permisos: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const supabaseAdmin = createAdminSupabase()
+    if (!supabaseAdmin) throw new Error(missingSupabaseServiceEnvMessage)
+    await requireAdminUser()
+
+    const { error } = await supabaseAdmin
+      .from('academia_info')
+      .update({ permisos_secretaria: permisos })
+      .not('id', 'is', null)
+
+    if (error) throw error
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Error al guardar permisos.' }
+  }
+}
+
 type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string }

@@ -70,3 +70,34 @@ export async function requireAdminUser() {
 
   return { supabase, user }
 }
+
+export async function getPermisosSecretaria(): Promise<string[]> {
+  const supabaseAdmin = createAdminSupabase()
+  if (!supabaseAdmin) return []
+
+  const { data } = await supabaseAdmin
+    .from('academia_info')
+    .select('permisos_secretaria')
+    .limit(1)
+    .maybeSingle<{ permisos_secretaria: string[] | null }>()
+
+  return data?.permisos_secretaria ?? ['dashboard', 'turnos', 'clientes']
+}
+
+export async function requirePanelAccess(seccion: string) {
+  const { supabase, user, role } = await getServerUserRole()
+
+  if (!supabase || !user) {
+    throw new Error('Necesitás iniciar sesión para realizar esta acción.')
+  }
+
+  if (role === 'admin') return { supabase, user, role }
+
+  if (role === 'secretaria') {
+    const permisos = await getPermisosSecretaria()
+    if (permisos.includes(seccion)) return { supabase, user, role }
+    throw new Error('No tenés permiso para realizar esta acción.')
+  }
+
+  throw new Error('No tenés permisos para realizar esta acción.')
+}
