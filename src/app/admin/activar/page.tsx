@@ -13,16 +13,42 @@ export default function ActivarCuentaPage() {
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    // El callback /auth/callback ya intercambió el code por una sesión.
-    // Solo verificamos que haya sesión activa.
-    supabase.auth.getSession().then(({ data, error }: { data: { session: unknown }, error: { message: string } | null }) => {
-      if (error || !data.session) {
-        setErrorMsg("El link de invitación no es válido o ya expiró.");
-        setStep("error");
-      } else {
+    async function inicializar() {
+      // Caso 1: la sesión ya fue establecida por /auth/callback (PKCE flow)
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
         setStep("set-password");
+        return;
       }
-    });
+
+      // Caso 2: tokens en el hash de la URL (implicit flow)
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.replace("#", ""));
+        const type = params.get("type");
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        if (type === "invite" && accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) {
+            setErrorMsg("El link de invitación no es válido o ya expiró.");
+            setStep("error");
+          } else {
+            setStep("set-password");
+          }
+          return;
+        }
+      }
+
+      setErrorMsg("No se encontró un token de invitación válido.");
+      setStep("error");
+    }
+
+    void inicializar();
   }, []);
 
   const handleGuardar = async (e: React.FormEvent) => {
