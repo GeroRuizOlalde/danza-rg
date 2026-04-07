@@ -157,13 +157,17 @@ export default function TurneroPage() {
           setIsAdminUser(role === "admin");
           const { data: perfil } = await supabase.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
           if (perfil) {
+            const edad = perfil.fecha_nacimiento ? calcularEdad(perfil.fecha_nacimiento) : undefined;
+            const nombreCompleto = [perfil.nombre, perfil.apellido].filter(Boolean).join(" ");
             setFormData((prev) => ({
               ...prev,
               nombre: perfil.nombre || "",
               apellido: perfil.apellido || "",
               telefono: perfil.telefono || "",
               email: auth.user.email || "",
-              userAge: perfil.fecha_nacimiento ? calcularEdad(perfil.fecha_nacimiento) : undefined,
+              userAge: edad,
+              alumnoNombre: prev.alumnoNombre || nombreCompleto,
+              alumnoEdad: prev.alumnoEdad || (edad !== undefined ? String(edad) : ""),
             }));
           }
         }
