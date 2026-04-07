@@ -138,7 +138,7 @@ export async function invitarUsuarioSistemaAction(
       data: {
         display_name: nombre || emailNorm.split('@')[0],
       },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/activar`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/admin/activar`,
     })
 
     if (error) {

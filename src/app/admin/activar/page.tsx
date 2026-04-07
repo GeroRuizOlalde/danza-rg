@@ -13,29 +13,16 @@ export default function ActivarCuentaPage() {
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    // Supabase pone el token en el hash: #access_token=...&type=invite
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", ""));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-
-    if (type === "invite" && accessToken && refreshToken) {
-      // Establecer la sesión con el token de invitación
-      supabase.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }: { error: { message: string } | null }) => {
-          if (error) {
-            setErrorMsg("El link de invitación no es válido o ya expiró.");
-            setStep("error");
-          } else {
-            setStep("set-password");
-          }
-        });
-    } else {
-      setErrorMsg("No se encontró un token de invitación válido en la URL.");
-      setStep("error");
-    }
+    // El callback /auth/callback ya intercambió el code por una sesión.
+    // Solo verificamos que haya sesión activa.
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error || !data.session) {
+        setErrorMsg("El link de invitación no es válido o ya expiró.");
+        setStep("error");
+      } else {
+        setStep("set-password");
+      }
+    });
   }, []);
 
   const handleGuardar = async (e: React.FormEvent) => {
