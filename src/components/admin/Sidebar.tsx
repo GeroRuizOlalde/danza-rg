@@ -95,6 +95,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         { name: 'Horarios', path: '/admin/horarios', icon: 'H' },
         { name: 'Clases', path: '/admin/clases', icon: 'C' },
         { name: 'Configuracion', path: '/admin/configuracion', icon: 'S' },
+        { name: 'Equipo', path: '/admin/equipo', icon: 'E' },
       ],
     },
   ]
