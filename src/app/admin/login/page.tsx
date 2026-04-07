@@ -3,17 +3,39 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+type Mode = "login" | "set-password" | "success";
+
 export default function LoginPage() {
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Si Supabase redirigió aquí con tokens de invitación, ir a /admin/activar
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash.includes("type=invite") && hash.includes("access_token=")) {
-      window.location.href = "/admin/activar" + hash;
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash.replace("#", ""));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (type === "invite" && accessToken && refreshToken) {
+      // Establecer sesión con el token de invitación y mostrar form de contraseña
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error: sessionError }) => {
+          if (sessionError) {
+            setError("El link de invitación no es válido o ya expiró.");
+          } else {
+            // Limpiar hash de la URL sin recargar la página
+            window.history.replaceState(null, "", window.location.pathname);
+            setMode("set-password");
+          }
+        });
     }
   }, []);
 
@@ -30,7 +52,7 @@ export default function LoginPage() {
       }
 
       if (!data.session) {
-        setError("Falta confirmar el email en Supabase.");
+        setError("No se pudo iniciar sesión.");
         return;
       }
 
@@ -42,26 +64,129 @@ export default function LoginPage() {
     }
   };
 
+  const handleSetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+
+    if (newPassword.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+      return;
+    }
+
+    setMode("success");
+    setTimeout(() => {
+      window.location.href = "/admin/dashboard";
+    }, 2000);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#1A1A22] to-[#2A1F2E]">
-      <div className="bg-white/5 border border-[#E8A0B4]/15 rounded-3xl p-11 w-full max-w-[400px] backdrop-blur-md">
-        <div className="font-playfair text-3xl font-semibold text-white text-center mb-1">R.G <span className="text-[#E8A0B4]">Danza</span></div>
-        <div className="text-center text-sm text-white/35 mb-8 tracking-wide">Panel de administración</div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-linear-to-br from-negro to-[#2A1F2E]">
+      <div className="bg-white/5 border border-rosa/15 rounded-3xl p-11 w-full max-w-100 backdrop-blur-md">
+        <div className="font-playfair text-3xl font-semibold text-white text-center mb-1">
+          R.G <span className="text-rosa">Danza</span>
+        </div>
+        <div className="text-center text-sm text-white/35 mb-8 tracking-wide">
+          Panel de administración
+        </div>
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <input type="email" required placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20" />
+        {mode === "login" && (
+          <form onSubmit={handleLogin}>
+            <div className="mb-4">
+              <input
+                type="email"
+                required
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
+              />
+            </div>
+            <div className="mb-6">
+              <input
+                type="password"
+                required
+                placeholder="Tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
+              />
+            </div>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl mb-4 text-center">
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-rosa-d text-white rounded-full py-3.5 text-sm font-semibold hover:bg-gris disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Verificando..." : "Ingresar al panel"}
+            </button>
+          </form>
+        )}
+
+        {mode === "set-password" && (
+          <>
+            <h2 className="text-white font-semibold text-lg text-center mb-1">
+              Activar cuenta
+            </h2>
+            <p className="text-white/40 text-sm text-center mb-6">
+              Elegí una contraseña para acceder al panel.
+            </p>
+            <form onSubmit={handleSetPassword} className="space-y-4">
+              <input
+                type="password"
+                required
+                placeholder="Nueva contraseña (mín. 8 caracteres)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
+              />
+              <input
+                type="password"
+                required
+                placeholder="Repetir contraseña"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-white/5 border border-rosa/20 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-rosa/50"
+              />
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl text-center">
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-rosa-d text-white rounded-full py-3.5 text-sm font-semibold hover:bg-gris disabled:opacity-50 transition-colors"
+              >
+                {loading ? "Guardando..." : "Activar cuenta"}
+              </button>
+            </form>
+          </>
+        )}
+
+        {mode === "success" && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">✓</div>
+            <p className="text-white font-semibold text-lg mb-1">¡Cuenta activada!</p>
+            <p className="text-white/40 text-sm">Redirigiendo al panel...</p>
           </div>
-          <div className="mb-6">
-            <input type="password" required placeholder="Tu contraseña" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white/5 border border-[#E8A0B4]/20 rounded-xl px-4 py-3 text-white placeholder-white/20" />
-          </div>
-
-          {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl mb-4 text-center">{error}</div>}
-
-          <button type="submit" disabled={loading} className="w-full bg-[#C97A96] text-white rounded-full py-3.5 text-sm font-semibold hover:bg-[#4A4A55] disabled:opacity-50">
-            {loading ? "Verificando..." : "Ingresar al panel"}
-          </button>
-        </form>
+        )}
       </div>
     </div>
   );
