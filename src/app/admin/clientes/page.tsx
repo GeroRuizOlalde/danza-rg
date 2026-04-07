@@ -72,6 +72,8 @@ export default function ClientesPage() {
     estado: "nueva",
     fecha_inicio: "",
     clase_id: "",
+    apto_medico: false,
+    fotocopia_dni: false,
   });
   const [guardandoEdit, setGuardandoEdit] = useState(false);
 
@@ -239,6 +241,8 @@ export default function ClientesPage() {
       estado: alumna.estado || "nueva",
       fecha_inicio: inscripcion?.fecha_inicio || "",
       clase_id: inscripcion?.clase_id || "",
+      apto_medico: alumna.apto_medico || false,
+      fotocopia_dni: alumna.fotocopia_dni || false,
     });
     setIsEditModalOpen(true);
   };
@@ -267,8 +271,10 @@ export default function ClientesPage() {
       return;
     }
 
-    // Actualizar fecha_inicio en alumna_clases si se proporcionó
-
+    await Promise.all([
+      actualizarChecklistAlumnaAction(editForm.id, "apto_medico", editForm.apto_medico),
+      actualizarChecklistAlumnaAction(editForm.id, "fotocopia_dni", editForm.fotocopia_dni),
+    ]);
 
     toast.success(`Datos de ${editForm.nombre} actualizados`);
     setIsEditModalOpen(false);
@@ -823,6 +829,25 @@ export default function ClientesPage() {
                     <option value="activa">Activa</option>
                     <option value="baja">Baja</option>
                   </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[0.7rem] font-bold uppercase tracking-widest text-[#8A8A99] mb-2">Documentación</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({...editForm, apto_medico: !editForm.apto_medico})}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${editForm.apto_medico ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-red-50 text-red-400 border-red-100"}`}
+                  >
+                    <span>{editForm.apto_medico ? "✓" : "✕"}</span> Apto médico
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({...editForm, fotocopia_dni: !editForm.fotocopia_dni})}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${editForm.fotocopia_dni ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-red-50 text-red-400 border-red-100"}`}
+                  >
+                    <span>{editForm.fotocopia_dni ? "✓" : "✕"}</span> Copia DNI
+                  </button>
                 </div>
               </div>
               <div>
