@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -8,6 +8,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Si Supabase redirigió aquí con tokens de invitación, ir a /admin/activar
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("type=invite") && hash.includes("access_token=")) {
+      window.location.href = "/admin/activar" + hash;
+    }
+  }, []);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
