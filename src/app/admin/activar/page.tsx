@@ -15,7 +15,7 @@ export default function ActivarCuentaPage() {
   useEffect(() => {
     // El callback /auth/callback ya intercambió el code por una sesión.
     // Solo verificamos que haya sesión activa.
-    supabase.auth.getSession().then(({ data, error }) => {
+    supabase.auth.getSession().then(({ data, error }: { data: { session: unknown }, error: { message: string } | null }) => {
       if (error || !data.session) {
         setErrorMsg("El link de invitación no es válido o ya expiró.");
         setStep("error");
