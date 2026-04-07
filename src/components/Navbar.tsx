@@ -174,7 +174,7 @@ export default function Navbar() {
       </button>
 
       <div
-        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-[#FFF9FB]/98 backdrop-blur-xl transition-all duration-300 md:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-white transition-all duration-300 md:hidden ${
           menuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
         }`}
       >
