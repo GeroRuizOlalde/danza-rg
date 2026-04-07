@@ -175,7 +175,7 @@ async function crearReservaSegura({
   }
 
   const validarHorario = origen === 'turnero' && horarioLimpio !== HORARIO_A_COORDINAR
-  const fechaLimpia = validarHorario ? fecha : null
+  const fechaLimpia = validarHorario ? fecha : (fecha ?? getTodayInArgentina())
   const diaReserva = validarHorario && fechaLimpia ? getDiaSemana(fechaLimpia) : null
 
   if (validarHorario) {
