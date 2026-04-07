@@ -32,10 +32,19 @@ export async function actualizarPermisosSecretariaAction(
     if (!supabaseAdmin) throw new Error(missingSupabaseServiceEnvMessage)
     await requireAdminUser()
 
+    const { data: infoRow, error: fetchError } = await supabaseAdmin
+      .from('academia_info')
+      .select('id')
+      .limit(1)
+      .maybeSingle<{ id: string }>()
+
+    if (fetchError) throw fetchError
+    if (!infoRow?.id) throw new Error('No se encontró la configuración de la academia.')
+
     const { error } = await supabaseAdmin
       .from('academia_info')
       .update({ permisos_secretaria: permisos })
-      .not('id', 'is', null)
+      .eq('id', infoRow.id)
 
     if (error) throw error
     return { success: true }
