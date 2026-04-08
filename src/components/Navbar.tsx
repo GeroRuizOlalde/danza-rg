@@ -83,8 +83,9 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <nav
-      className={`fixed left-0 right-0 top-0 z-[100] flex h-[72px] items-center justify-between border-b border-[#E8A0B4]/20 bg-white/92 px-[5%] backdrop-blur-xl transition-shadow duration-300 ${
+      className={`fixed left-0 right-0 top-0 z-[100] flex h-[72px] items-center justify-between border-b border-[#E8A0B4]/20 bg-white px-[5%] transition-shadow duration-300 ${
         scrolled ? 'shadow-[0_4px_24px_rgba(201,122,150,0.12)]' : ''
       }`}
     >
@@ -172,79 +173,68 @@ export default function Navbar() {
           />
         </span>
       </button>
+    </nav>
 
-      <div
-        className={`fixed inset-x-0 bottom-0 top-[72px] z-[99] border-t border-[#E8A0B4]/15 bg-white transition-all duration-300 md:hidden ${
-          menuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
-        }`}
-      >
-        <div className="mx-auto flex h-full max-w-[520px] flex-col overflow-y-auto px-5 pb-8 pt-5">
-          <div className="mb-5 rounded-[28px] border border-[#E8A0B4]/20 bg-white px-5 py-5 shadow-[0_12px_32px_rgba(26,26,34,0.08)]">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[2px] text-[#C97A96]">
-              Navegación
-            </p>
-            <div className="mt-2 font-playfair text-[2rem] font-bold leading-none text-[#1A1A22]">
-              {renderLogo()}
-            </div>
-            <p className="mt-4 rounded-[24px] bg-[#1A1A22] px-4 py-4 text-sm leading-relaxed text-white/78">
-              Reserva desde el celular y deja tus datos listos para agilizar el ingreso.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            {navLinks.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={closeMenu}
-                className={`rounded-2xl border px-4 py-3 text-base font-semibold no-underline transition-all ${
-                  isActive(href)
-                    ? 'border-[#E8A0B4] bg-[#FDF0F4] text-[#C97A96]'
-                    : 'border-[#E8A0B4]/18 bg-white text-[#1A1A22] hover:border-[#C97A96] hover:text-[#C97A96]'
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-6 space-y-3 border-t border-[#E8A0B4]/20 pt-5">
+    <div
+      className={`fixed inset-x-0 bottom-0 top-18 z-99 overflow-y-auto bg-white transition-all duration-300 md:hidden ${
+        menuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
+      }`}
+    >
+      <div className="flex flex-col px-5 pb-8 pt-4">
+        <div className="flex flex-col gap-1.5">
+          {navLinks.map(({ href, label }) => (
             <Link
-              href="/turnero"
+              key={href}
+              href={href}
               onClick={closeMenu}
-              className="block rounded-full bg-[#C97A96] px-5 py-3.5 text-center text-sm font-bold text-white no-underline shadow-[0_8px_24px_rgba(201,122,150,0.22)] transition-colors hover:bg-[#1A1A22]"
+              className={`rounded-2xl px-4 py-3.5 text-base font-semibold no-underline transition-all ${
+                isActive(href)
+                  ? 'bg-rosa-pale text-rosa-d'
+                  : 'text-negro hover:bg-rosa-pale hover:text-rosa-d'
+              }`}
             >
-              Reservar turno
+              {label}
             </Link>
+          ))}
+        </div>
 
-            {user ? (
-              <div className="space-y-2">
-                <Link
-                  href={profileHref}
-                  onClick={closeMenu}
-                  className="block rounded-2xl border border-[#E8A0B4]/20 bg-white px-4 py-3 text-center text-sm font-semibold text-[#1A1A22] no-underline transition-colors hover:border-[#C97A96] hover:text-[#C97A96]"
-                >
-                  {profileLabel}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500 transition-colors hover:bg-red-100"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            ) : (
+        <div className="mt-5 flex flex-col gap-3 border-t border-rosa/20 pt-5">
+          <Link
+            href="/turnero"
+            onClick={closeMenu}
+            className="block rounded-full bg-rosa-d px-5 py-3.5 text-center text-sm font-bold text-white no-underline transition-colors hover:bg-negro"
+          >
+            Reservar turno
+          </Link>
+
+          {user ? (
+            <>
               <Link
-                href="/login"
+                href={profileHref}
                 onClick={closeMenu}
-                className="block rounded-2xl border border-[#E8A0B4]/20 bg-white px-4 py-3 text-center text-sm font-semibold text-[#4A4A55] no-underline transition-colors hover:border-[#C97A96] hover:text-[#C97A96]"
+                className="block rounded-full border border-rosa/30 px-5 py-3.5 text-center text-sm font-semibold text-negro no-underline transition-colors hover:border-rosa-d hover:text-rosa-d"
               >
-                Iniciar sesión
+                {profileLabel}
               </Link>
-            )}
-          </div>
+              <button
+                onClick={handleLogout}
+                className="w-full rounded-full border border-red-100 bg-red-50 px-5 py-3.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-100"
+              >
+                Cerrar sesión
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              onClick={closeMenu}
+              className="block rounded-full border border-rosa/30 px-5 py-3.5 text-center text-sm font-semibold text-gris no-underline transition-colors hover:border-rosa-d hover:text-rosa-d"
+            >
+              Iniciar sesión
+            </Link>
+          )}
         </div>
       </div>
-    </nav>
+    </div>
+    </>
   )
 }
