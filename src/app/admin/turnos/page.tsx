@@ -34,6 +34,8 @@ type Horario = {
   clase_id: string;
   dia: string;
   hora: number;
+  sala: number;
+  nivel: string | null;
 };
 
 type Cliente = {
@@ -205,7 +207,7 @@ export default function TurnosPage() {
   async function fetchHorarios() {
     const { data } = await supabase
       .from("horarios")
-      .select("id, clase_id, dia, hora")
+      .select("id, clase_id, dia, hora, sala, nivel")
       .order("dia")
       .order("hora");
 
@@ -286,7 +288,12 @@ export default function TurnosPage() {
     }
 
     if (nuevoTurno.disciplina === "Asesoramiento") {
-      return [HORARIO_A_COORDINAR];
+      return [
+        {
+          value: HORARIO_A_COORDINAR,
+          label: HORARIO_A_COORDINAR,
+        },
+      ];
     }
 
     const claseSeleccionada = clases.find((clase) => clase.nombre === nuevoTurno.disciplina);
@@ -297,16 +304,25 @@ export default function TurnosPage() {
 
     const diaSeleccionado = getDiaSemana(nuevoTurno.fecha);
 
-    return Array.from(
-      new Set(
-        horarios
-          .filter(
-            (horario) =>
-              horario.clase_id === claseSeleccionada.id && horario.dia === diaSeleccionado
-          )
-          .map((horario) => `${String(horario.hora).padStart(2, "0")}:00`)
+    return horarios
+      .filter(
+        (horario) =>
+          horario.clase_id === claseSeleccionada.id && horario.dia === diaSeleccionado
       )
-    ).sort();
+      .sort((a, b) => a.hora - b.hora || a.sala - b.sala)
+      .map((horario) => {
+        const hora = `${String(horario.hora).padStart(2, "0")}:00`;
+        const detalles = [`Sala ${horario.sala}`];
+
+        if (horario.nivel?.trim()) {
+          detalles.push(horario.nivel.trim());
+        }
+
+        return {
+          value: hora,
+          label: `${hora} hs · ${detalles.join(" · ")}`,
+        };
+      });
   }, [clases, horarios, nuevoTurno.disciplina, nuevoTurno.fecha]);
 
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
@@ -811,9 +827,9 @@ export default function TurnosPage() {
                               ? "Sin horarios disponibles"
                               : "Elegir hora"}
                     </option>
-                    {horariosDisponibles.map((hora) => (
-                      <option key={hora} value={hora}>
-                        {hora === HORARIO_A_COORDINAR ? hora : `${hora} hs`}
+                    {horariosDisponibles.map((horario) => (
+                      <option key={`${horario.value}-${horario.label}`} value={horario.value}>
+                        {horario.label}
                       </option>
                     ))}
                   </select>
