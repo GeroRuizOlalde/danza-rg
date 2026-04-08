@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { DIAS_SEMANA_ORDENADOS, isDiaAbierto, sanitizeDiasAbiertos } from '@/lib/academia'
 import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
 import { HORARIO_A_COORDINAR, getDiaSemana } from '@/lib/reservas'
-import { createAdminSupabase, requireAdminUser } from '@/lib/supabase-server'
+import { createAdminSupabase, requireAdminUser, requirePanelAccess } from '@/lib/supabase-server'
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -117,6 +117,18 @@ async function getAdminContext() {
   }
 
   const { user } = await requireAdminUser()
+
+  return { supabaseAdmin, user }
+}
+
+async function getPanelContext(seccion: string) {
+  const supabaseAdmin = createAdminSupabase()
+
+  if (!supabaseAdmin) {
+    throw new Error(missingSupabaseServiceEnvMessage)
+  }
+
+  const { user } = await requirePanelAccess(seccion)
 
   return { supabaseAdmin, user }
 }
@@ -273,7 +285,7 @@ export async function actualizarAcademiaAdminAction(
       return { success: false, error: 'Selecciona al menos un dia de apertura.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('configuracion')
     const diasAbiertos = sanitizeDiasAbiertos(input.dias_abiertos)
 
     const { error } = await supabaseAdmin
@@ -325,7 +337,7 @@ export async function guardarClaseAdminAction(input: ClaseInput): Promise<Action
       estado,
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('clases')
 
     if (input.id) {
       const { error } = await supabaseAdmin.from('clases').update(payload).eq('id', input.id)
@@ -372,7 +384,7 @@ export async function guardarClaseConImagenAdminAction(
       return { success: false, error: 'Completa nombre, etiqueta y edades.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('clases')
     let imagenUrl = removeCurrentImage ? '' : imagenUrlActual
 
     if (file instanceof File && file.size > 0) {
@@ -432,7 +444,7 @@ export async function guardarClaseConImagenAdminAction(
   } catch (error) {
     try {
       if (uploadedImagePath) {
-        const { supabaseAdmin } = await getAdminContext()
+        const { supabaseAdmin } = await getPanelContext('clases')
         await supabaseAdmin.storage.from('galeria').remove([uploadedImagePath]).catch(() => undefined)
       }
     } catch {
@@ -452,7 +464,7 @@ export async function eliminarClaseAdminAction(id: string): Promise<ActionResult
       return { success: false, error: 'Clase inválida.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('clases')
     const { data: claseExistente, error: fetchError } = await supabaseAdmin
       .from('clases')
       .select('imagen_url')
@@ -498,7 +510,7 @@ export async function guardarHorarioAdminAction(
       return { success: false, error: 'La sala seleccionada no es válida.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('horarios')
     const diasAbiertos = await obtenerDiasAbiertosAcademia(supabaseAdmin)
 
     if (!isDiaAbierto(dia, diasAbiertos)) {
@@ -571,7 +583,7 @@ export async function eliminarHorarioAdminAction(id: string): Promise<ActionResu
       return { success: false, error: 'Horario inválido.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('horarios')
     const { error } = await supabaseAdmin.from('horarios').delete().eq('id', id)
 
     if (error) {
@@ -596,7 +608,7 @@ export async function actualizarReservaEstadoAdminAction(
       return { success: false, error: 'El estado de la reserva no es válido.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('turnos')
     const { error } = await supabaseAdmin
       .from('reservas')
       .update({ estado: nuevoEstado })
@@ -632,7 +644,7 @@ export async function crearReservaAdminAction(
       return { success: false, error: 'Completá los campos obligatorios del turno.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('turnos')
     const validarHorario = horario !== HORARIO_A_COORDINAR
 
     if (perfilId) {
@@ -701,7 +713,7 @@ export async function eliminarReservaAdminAction(reservaId: string): Promise<Act
       return { success: false, error: 'Turno inválido.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('turnos')
     const { error } = await supabaseAdmin.from('reservas').delete().eq('id', reservaId)
 
     if (error) {
@@ -741,7 +753,7 @@ export async function crearPagoAdminAction(
       return { success: false, error: 'Revisá los datos del pago antes de guardar.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('pagos')
 
     const { data: pagoExistente, error: duplicateError } = await supabaseAdmin
       .from('pagos')
@@ -815,7 +827,7 @@ export async function guardarProfesorAdminAction(
       activo: Boolean(input.activo),
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('profesores')
 
     if (input.id) {
       const { error } = await supabaseAdmin.from('profesores').update(payload).eq('id', input.id)
@@ -849,7 +861,7 @@ export async function toggleProfesorActivoAdminAction(
       return { success: false, error: 'Profesor inválido.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('profesores')
     const { error } = await supabaseAdmin
       .from('profesores')
       .update({ activo })
@@ -876,7 +888,7 @@ export async function eliminarProfesorAdminAction(
       return { success: false, error: 'Profesor invalido.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('profesores')
     const { error } = await supabaseAdmin.from('profesores').delete().eq('id', profesorId)
 
     if (error) {
@@ -903,7 +915,7 @@ export async function marcarAsistenciaProfesorAdminAction(
       return { success: false, error: 'La asistencia que querés guardar es inválida.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('profesores')
     const { data: existente, error: existingError } = await supabaseAdmin
       .from('asistencia_profesores')
       .select('id')
@@ -982,7 +994,7 @@ export async function subirFotoGaleriaAdminAction(
 
     const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
     const fileName = `${randomUUID()}.${extension}`
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('galeria')
 
     const { data: ultimaFoto, error: orderError } = await supabaseAdmin
       .from('galeria')
@@ -1038,7 +1050,7 @@ export async function eliminarFotoGaleriaAdminAction(
       return { success: false, error: 'La foto seleccionada no es válida.' }
     }
 
-    const { supabaseAdmin } = await getAdminContext()
+    const { supabaseAdmin } = await getPanelContext('galeria')
     const storagePath = getSafeStoragePath(fotoUrl)
 
     if (storagePath) {

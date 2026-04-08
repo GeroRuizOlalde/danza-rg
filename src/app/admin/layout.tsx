@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/admin/Sidebar'
 import TopBar from '@/components/admin/Topbar'
+import { getUserRole } from '@/lib/auth-role'
 import { supabase } from '@/lib/supabase'
 import { PERMISOS_DEFAULT_SECRETARIA, seccionDesdePath, tieneAcceso } from '@/lib/permisos'
 
@@ -30,9 +31,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return
       }
 
-      const role = user.app_metadata?.role || user.user_metadata?.role
+      const role = getUserRole(user)
 
-      if (role !== 'admin' && role !== 'secretaria') {
+      if (!role) {
         router.replace('/admin/login')
         return
       }

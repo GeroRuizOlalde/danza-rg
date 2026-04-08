@@ -18,9 +18,15 @@ export async function getPermisosSecretariaAction(): Promise<
       .maybeSingle<{ permisos_secretaria: string[] | null }>()
 
     if (error) throw error
-    return { success: true, data: data?.permisos_secretaria ?? ['dashboard', 'turnos', 'clientes'] }
+    return {
+      success: true,
+      data: data?.permisos_secretaria ?? ['dashboard', 'turnos', 'clientes'],
+    }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Error al cargar permisos.' }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error al cargar permisos.',
+    }
   }
 }
 
@@ -39,7 +45,7 @@ export async function actualizarPermisosSecretariaAction(
       .maybeSingle<{ id: string }>()
 
     if (fetchError) throw fetchError
-    if (!infoRow?.id) throw new Error('No se encontró la configuración de la academia.')
+    if (!infoRow?.id) throw new Error('No se encontrÃ³ la configuraciÃ³n de la academia.')
 
     const { error } = await supabaseAdmin
       .from('academia_info')
@@ -49,7 +55,10 @@ export async function actualizarPermisosSecretariaAction(
     if (error) throw error
     return { success: true }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Error al guardar permisos.' }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error al guardar permisos.',
+    }
   }
 }
 
@@ -83,9 +92,7 @@ async function getAdminContext() {
   return supabaseAdmin
 }
 
-export async function listarUsuariosSistemaAction(): Promise<
-  ActionResult<UsuarioSistema[]>
-> {
+export async function listarUsuariosSistemaAction(): Promise<ActionResult<UsuarioSistema[]>> {
   try {
     const supabaseAdmin = await getAdminContext()
 
@@ -129,41 +136,39 @@ export async function invitarUsuarioSistemaAction(
     const nombre = displayName.trim()
 
     if (!emailNorm || !ROLES_VALIDOS.has(role)) {
-      return { success: false, error: 'Email o rol inválido.' }
+      return { success: false, error: 'Email o rol invÃ¡lido.' }
     }
 
     const supabaseAdmin = await getAdminContext()
 
-    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(emailNorm, {
-      data: {
-        display_name: nombre || emailNorm.split('@')[0],
-      },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/activar`,
-    })
+    const { data: invitedUser, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      emailNorm,
+      {
+        data: {
+          display_name: nombre || emailNorm.split('@')[0],
+        },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/activar`,
+      }
+    )
 
     if (error) {
       throw error
     }
 
-    // Asignar el rol en app_metadata buscando al usuario recién creado
-    const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-      perPage: 200,
-    })
+    const invitedUserId = invitedUser?.user?.id
 
-    if (listError) throw listError
-
-    const nuevoUsuario = listData?.users?.find((u) => u.email === emailNorm)
-
-    if (nuevoUsuario) {
-      const { error: roleError } = await supabaseAdmin.auth.admin.updateUserById(
-        nuevoUsuario.id,
-        {
-          app_metadata: { role },
-        }
-      )
-
-      if (roleError) throw roleError
+    if (!invitedUserId) {
+      throw new Error('No pudimos obtener el usuario invitado para asignarle el rol.')
     }
+
+    const { error: roleError } = await supabaseAdmin.auth.admin.updateUserById(
+      invitedUserId,
+      {
+        app_metadata: { role },
+      }
+    )
+
+    if (roleError) throw roleError
 
     return { success: true }
   } catch (error) {
@@ -180,7 +185,7 @@ export async function cambiarRolUsuarioAction(
 ): Promise<ActionResult> {
   try {
     if (!userId || !ROLES_VALIDOS.has(nuevoRol)) {
-      return { success: false, error: 'Usuario o rol inválido.' }
+      return { success: false, error: 'Usuario o rol invÃ¡lido.' }
     }
 
     const supabaseAdmin = await getAdminContext()
@@ -205,16 +210,15 @@ export async function cambiarRolUsuarioAction(
 export async function eliminarUsuarioSistemaAction(userId: string): Promise<ActionResult> {
   try {
     if (!userId) {
-      return { success: false, error: 'Usuario inválido.' }
+      return { success: false, error: 'Usuario invÃ¡lido.' }
     }
 
     const supabaseAdmin = await getAdminContext()
 
-    // No permitir eliminar al propio usuario que está ejecutando la acción
     const { user: currentUser } = await requireAdminUser()
 
     if (currentUser.id === userId) {
-      return { success: false, error: 'No podés eliminar tu propio usuario.' }
+      return { success: false, error: 'No podÃ©s eliminar tu propio usuario.' }
     }
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)

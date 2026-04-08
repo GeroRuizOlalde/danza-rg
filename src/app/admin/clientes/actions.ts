@@ -1,7 +1,7 @@
 'use server'
 
 import { missingSupabaseServiceEnvMessage } from '@/lib/supabase-env'
-import { createAdminSupabase, requireAdminUser } from '@/lib/supabase-server'
+import { createAdminSupabase, requirePanelAccess } from '@/lib/supabase-server'
 
 type ActionResult =
   | { success: true }
@@ -37,7 +37,7 @@ async function getAdminClient() {
     throw new Error(missingSupabaseServiceEnvMessage)
   }
 
-  await requireAdminUser()
+  await requirePanelAccess('clientes')
 
   return supabaseAdmin
 }

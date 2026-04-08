@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getUserRole } from "@/lib/auth-role";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 
@@ -13,6 +14,12 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "";
+
+  const getSafeRedirect = (value: string) => {
+    if (!value.startsWith("/")) return null;
+    if (value.startsWith("//")) return null;
+    return value;
+  };
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,13 +38,15 @@ function LoginForm() {
         return;
       }
 
-      if (redirectTo) {
-        window.location.href = redirectTo;
+      const safeRedirect = getSafeRedirect(redirectTo);
+
+      if (safeRedirect) {
+        window.location.href = safeRedirect;
         return;
       }
 
-      const role = data.user?.app_metadata?.role || data.user?.user_metadata?.role;
-      window.location.href = role === "admin" ? "/admin/dashboard" : "/perfil";
+      const role = getUserRole(data.user);
+      window.location.href = role ? "/admin/dashboard" : "/perfil";
     } catch {
       setError("Error interno del servidor.");
     } finally {

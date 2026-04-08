@@ -31,10 +31,6 @@ export default function MensajesPage() {
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [cambiandoId, setCambiandoId] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchMensajes();
-  }, []);
-
   async function fetchMensajes() {
     setCargando(true);
     const { data, error } = await supabase
@@ -50,6 +46,14 @@ export default function MensajesPage() {
     }
     setCargando(false);
   }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchMensajes();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const handleCambiarEstado = async (id: string, nuevoEstado: string) => {
     setCambiandoId(id);

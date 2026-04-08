@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
+import { getUserRole } from '@/lib/auth-role'
 import { supabase } from '@/lib/supabase'
 import { useAcademiaInfo } from './AcademiaInfoProvider'
 
@@ -22,7 +23,7 @@ export default function Navbar() {
 
   const pathname = usePathname()
   const router = useRouter()
-  const userRole = user?.app_metadata?.role || user?.user_metadata?.role
+  const userRole = getUserRole(user)
   const isAdminUser = userRole === 'admin' || userRole === 'secretaria'
   const profileHref = isAdminUser ? '/admin/dashboard' : '/perfil'
   const profileLabel = isAdminUser ? 'Panel admin' : 'Mi perfil'

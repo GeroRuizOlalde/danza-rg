@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { getUserRole } from '@/lib/auth-role'
 import { supabase } from '@/lib/supabase'
 import { PERMISOS_DEFAULT_SECRETARIA, tieneAcceso } from '@/lib/permisos'
 
@@ -36,7 +37,7 @@ export default function Sidebar({ isOpen = false, onClose, permisosSecretaria = 
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        const userRole = user.app_metadata?.role || user.user_metadata?.role || null
+        const userRole = getUserRole(user)
         setRole(userRole)
 
         if (user.user_metadata?.display_name) {

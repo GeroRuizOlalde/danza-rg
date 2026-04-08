@@ -20,11 +20,6 @@ type UsuarioSistema = {
   createdAt: string;
 };
 
-const ROL_LABEL: Record<string, string> = {
-  admin: "Administrador",
-  secretaria: "Secretaria",
-};
-
 const ROL_COLOR: Record<string, string> = {
   admin: "bg-[#E8A0B4]/20 text-[#C97A96] border-[#E8A0B4]/30",
   secretaria: "bg-blue-50 text-blue-500 border-blue-100",
@@ -49,15 +44,30 @@ export default function EquipoPage() {
   const [permisos, setPermisos] = useState<string[]>([]);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
 
-  useEffect(() => {
-    void cargarUsuarios();
-    void cargarPermisos();
-  }, []);
-
   async function cargarPermisos() {
     const result = await getPermisosSecretariaAction();
     if (result.success) setPermisos(result.data);
   }
+
+  async function cargarUsuarios() {
+    setCargando(true);
+    const result = await listarUsuariosSistemaAction();
+    if (result.success && result.data) {
+      setUsuarios(result.data);
+    } else if (!result.success) {
+      toast.error(result.error);
+    }
+    setCargando(false);
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void cargarUsuarios();
+      void cargarPermisos();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const togglePermiso = (key: string) => {
     setPermisos((prev) =>
@@ -76,16 +86,6 @@ export default function EquipoPage() {
     setGuardandoPermisos(false);
   };
 
-  async function cargarUsuarios() {
-    setCargando(true);
-    const result = await listarUsuariosSistemaAction();
-    if (result.success && result.data) {
-      setUsuarios(result.data);
-    } else if (!result.success) {
-      toast.error(result.error);
-    }
-    setCargando(false);
-  }
 
   const handleInvitar = async (e: React.FormEvent) => {
     e.preventDefault();

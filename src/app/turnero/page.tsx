@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { crearReservaTurneroAction } from "@/app/actions/reservas";
+import { getUserRole } from "@/lib/auth-role";
 import Navbar from "@/components/Navbar";
 import {
   buildReservationKey,
@@ -153,8 +154,8 @@ export default function TurneroPage() {
 
         if (auth.user) {
           setIsAuthenticated(true);
-          const role = auth.user.app_metadata?.role || auth.user.user_metadata?.role;
-          setIsAdminUser(role === "admin");
+          const role = getUserRole(auth.user);
+          setIsAdminUser(role === "admin" || role === "secretaria");
           const { data: perfil } = await supabase.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
           if (perfil) {
             const edad = perfil.fecha_nacimiento ? calcularEdad(perfil.fecha_nacimiento) : undefined;

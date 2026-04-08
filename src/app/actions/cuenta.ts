@@ -76,33 +76,29 @@ async function getAuthenticatedContext() {
 async function vincularReservasPendientes({
   supabaseAdmin,
   userId,
-  telefono,
   email,
 }: {
   supabaseAdmin: NonNullable<ReturnType<typeof createAdminSupabase>>
   userId: string
-  telefono: string
   email: string
 }) {
+  if (!email) {
+    return 0
+  }
+
   const { data, error } = await supabaseAdmin
     .from('reservas')
     .select('id, telefono, email')
     .is('perfil_id', null)
+    .eq('email', email)
     .order('created_at', { ascending: false })
-    .limit(500)
 
   if (error) {
     throw error
   }
 
   const ids = ((data as ReservaPendiente[] | null) ?? [])
-    .filter((reserva) => {
-      const mismoTelefono =
-        Boolean(telefono) && normalizarTelefono(reserva.telefono ?? '') === telefono
-      const mismoEmail = Boolean(email) && normalizarEmail(reserva.email) === email
-
-      return mismoTelefono || mismoEmail
-    })
+    .filter((reserva) => normalizarEmail(reserva.email) === email)
     .map((reserva) => reserva.id)
 
   if (ids.length > 0) {
@@ -206,7 +202,6 @@ async function persistirPerfilCliente({
   const linkedCount = await vincularReservasPendientes({
     supabaseAdmin,
     userId: user.id,
-    telefono,
     email: normalizarEmail(user.email),
   })
 

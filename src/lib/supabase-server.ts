@@ -2,6 +2,8 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabasePublicEnv, getSupabaseServiceEnv } from './supabase-env'
+import { getUserRole } from './auth-role'
+import { SECCIONES_PANEL } from './permisos'
 
 export async function createServerSupabase() {
   const { url, anonKey, isConfigured } = getSupabasePublicEnv()
@@ -52,7 +54,7 @@ export async function getServerUserRole() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const role = user?.app_metadata?.role || user?.user_metadata?.role || null
+  const role = getUserRole(user)
 
   return { supabase, user, role }
 }
@@ -61,11 +63,11 @@ export async function requireAdminUser() {
   const { supabase, user, role } = await getServerUserRole()
 
   if (!supabase || !user) {
-    throw new Error('Necesitás iniciar sesión para realizar esta acción.')
+    throw new Error('NecesitÃ¡s iniciar sesiÃ³n para realizar esta acciÃ³n.')
   }
 
   if (role !== 'admin') {
-    throw new Error('No tenés permisos de administrador para realizar esta acción.')
+    throw new Error('No tenÃ©s permisos de administrador para realizar esta acciÃ³n.')
   }
 
   return { supabase, user }
@@ -88,16 +90,22 @@ export async function requirePanelAccess(seccion: string) {
   const { supabase, user, role } = await getServerUserRole()
 
   if (!supabase || !user) {
-    throw new Error('Necesitás iniciar sesión para realizar esta acción.')
+    throw new Error('NecesitÃ¡s iniciar sesiÃ³n para realizar esta acciÃ³n.')
   }
 
   if (role === 'admin') return { supabase, user, role }
 
   if (role === 'secretaria') {
+    const seccionDef = SECCIONES_PANEL.find((item) => item.key === seccion)
+
+    if (seccionDef?.soloAdmin) {
+      throw new Error('No tenÃ©s permiso para realizar esta acciÃ³n.')
+    }
+
     const permisos = await getPermisosSecretaria()
     if (permisos.includes(seccion)) return { supabase, user, role }
-    throw new Error('No tenés permiso para realizar esta acción.')
+    throw new Error('No tenÃ©s permiso para realizar esta acciÃ³n.')
   }
 
-  throw new Error('No tenés permisos para realizar esta acción.')
+  throw new Error('No tenÃ©s permisos para realizar esta acciÃ³n.')
 }
