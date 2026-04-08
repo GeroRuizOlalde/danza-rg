@@ -24,6 +24,19 @@ type Pago = {
 // ─── Constantes ───────────────────────────────────────────────
 const METODOS = ["Efectivo", "Transferencia", "MercadoPago", "Otro"];
 
+function formatFechaPago(value: string | null | undefined) {
+  if (!value) return "—";
+
+  const normalized = value.includes("T") ? value : `${value}T12:00:00`;
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleDateString("es-AR");
+}
+
 function getMetodoIcon(m: string) {
   if (m === "Efectivo") return "💵";
   if (m === "Transferencia") return "🏦";
@@ -316,7 +329,7 @@ export default function PagosPage() {
                       {getMetodoIcon(p.metodo_pago)} {p.metodo_pago}
                     </td>
                     <td className="px-4 py-3 text-[0.83rem] text-[#8A8A99] whitespace-nowrap">
-                      {new Date(p.fecha_pago + "T00:00:00").toLocaleDateString("es-AR")}
+                      {formatFechaPago(p.fecha_pago)}
                     </td>
                     <td className="px-4 py-3 text-[0.83rem] text-[#8A8A99] max-w-[160px] truncate">
                       {p.nota || "—"}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { getDiaSemana, HORARIO_A_COORDINAR } from "@/lib/reservas";
 import { supabase } from "@/lib/supabase";
 import { getAvatarColor, getIniciales } from "@/lib/utils";
 import {
@@ -26,6 +27,13 @@ type Reserva = {
 type Clase = {
   id: string;
   nombre: string;
+};
+
+type Horario = {
+  id: string;
+  clase_id: string;
+  dia: string;
+  hora: number;
 };
 
 type Cliente = {
@@ -71,19 +79,6 @@ const EMPTY_NUEVO_TURNO: NuevoTurnoForm = {
   horario: "",
   estado: "pendiente",
 };
-
-const HORAS = [
-  "17:00",
-  "17:30",
-  "18:00",
-  "18:30",
-  "19:00",
-  "19:30",
-  "20:00",
-  "20:30",
-  "21:00",
-  "21:30",
-];
 
 function getTodayIso() {
   const hoy = new Date();
@@ -158,6 +153,7 @@ export default function TurnosPage() {
   const [filtroActivo, setFiltroActivo] = useState("Todos");
   const [turnos, setTurnos] = useState<Reserva[]>([]);
   const [clases, setClases] = useState<Clase[]>([]);
+  const [horarios, setHorarios] = useState<Horario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cargando, setCargando] = useState(true);
   const hoyIso = useMemo(() => getTodayIso(), []);
@@ -172,6 +168,7 @@ export default function TurnosPage() {
   useEffect(() => {
     fetchTurnos();
     fetchClases();
+    fetchHorarios();
     fetchClientes();
   }, []);
 
@@ -202,6 +199,18 @@ export default function TurnosPage() {
     const { data } = await supabase.from("clases").select("id, nombre").order("nombre");
     if (data) {
       setClases(data);
+    }
+  }
+
+  async function fetchHorarios() {
+    const { data } = await supabase
+      .from("horarios")
+      .select("id, clase_id, dia, hora")
+      .order("dia")
+      .order("hora");
+
+    if (data) {
+      setHorarios(data);
     }
   }
 
@@ -270,6 +279,35 @@ export default function TurnosPage() {
         .some((valor) => String(valor).toLowerCase().includes(termino))
     );
   }, [busquedaCliente, clientes]);
+
+  const horariosDisponibles = useMemo(() => {
+    if (!nuevoTurno.disciplina) {
+      return [];
+    }
+
+    if (nuevoTurno.disciplina === "Asesoramiento") {
+      return [HORARIO_A_COORDINAR];
+    }
+
+    const claseSeleccionada = clases.find((clase) => clase.nombre === nuevoTurno.disciplina);
+
+    if (!claseSeleccionada || !nuevoTurno.fecha) {
+      return [];
+    }
+
+    const diaSeleccionado = getDiaSemana(nuevoTurno.fecha);
+
+    return Array.from(
+      new Set(
+        horarios
+          .filter(
+            (horario) =>
+              horario.clase_id === claseSeleccionada.id && horario.dia === diaSeleccionado
+          )
+          .map((horario) => `${String(horario.hora).padStart(2, "0")}:00`)
+      )
+    ).sort();
+  }, [clases, horarios, nuevoTurno.disciplina, nuevoTurno.fecha]);
 
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
     const result = await actualizarReservaEstadoAdminAction(id, nuevoEstado);
@@ -716,7 +754,11 @@ export default function TurnosPage() {
                   required
                   value={nuevoTurno.disciplina}
                   onChange={(event) =>
-                    setNuevoTurno({ ...nuevoTurno, disciplina: event.target.value })
+                    setNuevoTurno({
+                      ...nuevoTurno,
+                      disciplina: event.target.value,
+                      horario: "",
+                    })
                   }
                   className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
                 >
@@ -740,7 +782,7 @@ export default function TurnosPage() {
                     value={nuevoTurno.fecha}
                     min={hoyIso}
                     onChange={(event) =>
-                      setNuevoTurno({ ...nuevoTurno, fecha: event.target.value })
+                      setNuevoTurno({ ...nuevoTurno, fecha: event.target.value, horario: "" })
                     }
                     className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] transition-all"
                   />
@@ -751,19 +793,35 @@ export default function TurnosPage() {
                   </label>
                   <select
                     required
+                    disabled={!nuevoTurno.disciplina || (nuevoTurno.disciplina !== "Asesoramiento" && !nuevoTurno.fecha)}
                     value={nuevoTurno.horario}
                     onChange={(event) =>
                       setNuevoTurno({ ...nuevoTurno, horario: event.target.value })
                     }
                     className="w-full border-[1.5px] border-[#E8A0B4]/30 rounded-xl px-4 py-2.5 text-[0.9rem] outline-none focus:border-[#C97A96] bg-white transition-all"
                   >
-                    <option value="">Elegir hora</option>
-                    {HORAS.map((hora) => (
+                    <option value="">
+                      {nuevoTurno.disciplina === "Asesoramiento"
+                        ? "Elegir modalidad"
+                        : !nuevoTurno.disciplina
+                          ? "Elegí una disciplina"
+                          : !nuevoTurno.fecha
+                            ? "Elegí una fecha"
+                            : horariosDisponibles.length === 0
+                              ? "Sin horarios disponibles"
+                              : "Elegir hora"}
+                    </option>
+                    {horariosDisponibles.map((hora) => (
                       <option key={hora} value={hora}>
-                        {hora} hs
+                        {hora === HORARIO_A_COORDINAR ? hora : `${hora} hs`}
                       </option>
                     ))}
                   </select>
+                  {nuevoTurno.disciplina !== "Asesoramiento" && nuevoTurno.fecha && horariosDisponibles.length === 0 && (
+                    <p className="mt-1.5 text-[0.72rem] text-[#8A8A99]">
+                      No hay horarios cargados para esa clase en el día seleccionado.
+                    </p>
+                  )}
                 </div>
               </div>
               <div>

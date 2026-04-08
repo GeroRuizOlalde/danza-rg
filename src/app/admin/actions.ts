@@ -237,6 +237,30 @@ async function crearReservaMedianteRpc(
   }
 }
 
+async function getReservaContext(reservaId: string) {
+  const supabaseAdmin = createAdminSupabase()
+
+  if (!supabaseAdmin) {
+    throw new Error(missingSupabaseServiceEnvMessage)
+  }
+
+  const { data: reserva, error } = await supabaseAdmin
+    .from('reservas')
+    .select('origen')
+    .eq('id', reservaId)
+    .limit(1)
+    .maybeSingle<{ origen: string | null }>()
+
+  if (error) {
+    throw error
+  }
+
+  const seccion = reserva?.origen === 'landing' ? 'mensajes' : 'turnos'
+  await requirePanelAccess(seccion)
+
+  return { supabaseAdmin, seccion }
+}
+
 export async function actualizarAdminDisplayNameAction(
   displayName: string
 ): Promise<ActionResult<{ displayName: string }>> {
@@ -608,7 +632,7 @@ export async function actualizarReservaEstadoAdminAction(
       return { success: false, error: 'El estado de la reserva no es válido.' }
     }
 
-    const { supabaseAdmin } = await getPanelContext('turnos')
+    const { supabaseAdmin } = await getReservaContext(reservaId)
     const { error } = await supabaseAdmin
       .from('reservas')
       .update({ estado: nuevoEstado })
@@ -713,7 +737,7 @@ export async function eliminarReservaAdminAction(reservaId: string): Promise<Act
       return { success: false, error: 'Turno inválido.' }
     }
 
-    const { supabaseAdmin } = await getPanelContext('turnos')
+    const { supabaseAdmin } = await getReservaContext(reservaId)
     const { error } = await supabaseAdmin.from('reservas').delete().eq('id', reservaId)
 
     if (error) {
@@ -1071,3 +1095,6 @@ export async function eliminarFotoGaleriaAdminAction(
     }
   }
 }
+
+
+
